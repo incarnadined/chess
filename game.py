@@ -60,9 +60,12 @@ while running:
                             posi = board.array.index(i)
                             #print(posj,posi)
         elif event.type == MOUSEBUTTONDOWN:
+            board.updatefen(turn.colour)
+            print(selected.position)
+            check = checkCheck(board, selected, coordToSquare(pygame.mouse.get_pos()), turn.colour)
+            print(check)
             nomove, board = selected.move(coordToSquare(pygame.mouse.get_pos()),board)
             matrixloc = chessToMatrix(selected.position)
-            print(board.wk,board.bk)
 
             if not nomove:
                 board.array[posi][posj] = None
@@ -75,11 +78,11 @@ while running:
                 available_squares = []
 
                 #Finish turn
-                check = checkCheck(board,turn.colour)
+                #check = checkCheck(board.fen)
                 turn.completeTurn()
                 selected = False
                 matrixloc = None
-            
+
             if nomove:
                 #Snap piece back to square
                 selected.coords = locate(selected.position)
