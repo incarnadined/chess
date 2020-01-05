@@ -1,3 +1,6 @@
 {
-    "python.pythonPath": "C:\\Users\\yello\\AppData\\Local\\Programs\\Python\\Python36\\python.exe"
+    "python.pythonPath": "C:\\Users\\yello\\AppData\\Local\\Programs\\Python\\Python36\\python.exe",
+    "python.linting.pylintEnabled": false,
+    "python.linting.flake8Enabled": true,
+    "python.linting.enabled": false
 }

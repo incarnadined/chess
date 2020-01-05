@@ -1,6 +1,6 @@
 import pygame
-import chess
 import math
+
 
 def number(letter):
     swap = {
@@ -18,6 +18,7 @@ def number(letter):
     except:
         pass
 
+
 def letter(number):
     swap = {
         '-1': None,
@@ -32,6 +33,7 @@ def letter(number):
         '8': None
     }
     return swap[str(number)]
+
 
 def locate(square):
     if square[0] == 'a':
@@ -70,6 +72,7 @@ def locate(square):
     #print(x,y)
     return (int(x),int(y))
 
+
 def coordToSquare(coord):
     x = coord[0]
     y = coord[1]
@@ -85,24 +88,70 @@ def coordToSquare(coord):
         return '00'
         pass
 
+
 def chessToMatrix(chess):
+    #print('\n')
+    #print(chess)
     row = str((int(chess[1]) - 8)*-1)
     column = number(chess[0])
     #print(row)
     #print(column)
     return row+column
 
+
 def matrixToChess(matrix):
     if len(str(matrix)) == 1:
         matrix = '0'+str(matrix)
     matrix = str(matrix)
-    print(matrix)
+    #print(matrix)
     if matrix[1] == '8' or matrix[1] == '9'or int(matrix)< 0:
         return None
     row = str((int(matrix[0]) - 8)*-1)
     column = letter(matrix[1])
     if int(row) > 0 and int(row) < 9 and column is not None:
-        return column+row
+        return column+row #c7
+
+
+def checkCheck(board,colour):
+    temp = []
+
+    if colour == 'w':
+        kingloc = board.wk
+        king = board.array[int(chessToMatrix(kingloc)[0])][int(chessToMatrix(kingloc)[1])]
+    elif colour =='b':
+        kingloc = board.bk
+        king = board.array[int(chessToMatrix(kingloc)[0])][int(chessToMatrix(kingloc)[1])]
+
+    start = int(chessToMatrix(kingloc)[1])
+    start1 = int(chessToMatrix(kingloc)[0])
+
+    #Find vertical-up possibilities
+    for i in range(start1,-1,-1):
+        temp.append(matrixToChess(str(i)+str(start)))
+        if matrixToChess(str(i)+str(start)) == kingloc:
+            pass
+        elif board.array[i][start] != None:
+            piece = board.array[i][start]
+            break
+
+    # Find veritcal-down possibilities
+    for i in range(start1+1,8,1):
+        temp.append(matrixToChess(str(i)+str(start)))
+        if matrixToChess(str(i)+str(start)) == kingloc:
+            pass
+        elif board.array[i][start] != None:
+            piece = board.array[i][start]
+            break
+
+    if piece.colour != king.colour:
+        if piece.symbol.upper() == 'Q' or piece.symbol.upper() == 'R':
+            return (True, king.colour)
+        elif piece.symbol.upper() == 'K':
+            if int(piece.matrix[0]) == int(king.matrix[0])+1 or int(piece.matrix[0]) == int(king.matrix[0])-1:
+                return (True, king.colour)
+
+    return (False, )
+
 
 class Turn():
     def __init__(self):
@@ -124,6 +173,7 @@ class Turn():
         elif self.colour == 'b' and colour == 'b':
             return font.render('Black', True, blue)
 
+
 class Taken():
     def __init__(self):
         self.array = []
@@ -132,7 +182,6 @@ class Taken():
     def add(self,piece):
         self.array.append(piece)
         self.sort()
-        print(self.white)
 
     def sort(self):
         self.white = []
@@ -146,6 +195,7 @@ class Taken():
         self.white.sort(key=lambda x: x.value, reverse=True)
         self.black.sort(key=lambda x: x.value, reverse=True)
 
+
 class King(pygame.sprite.Sprite):
     def __init__(self, colour, position):
         pygame.sprite.Sprite.__init__(self)
@@ -157,6 +207,7 @@ class King(pygame.sprite.Sprite):
         self.rect = pygame.Rect(self.coords[0],self.coords[1],63,63)
         self.symbol = 'K'
         self.poshistory = []
+        self.matrix = chessToMatrix(self.position)
 
     def move(self,pos,board):
         if pos in self.legalMoves(board):
@@ -164,12 +215,16 @@ class King(pygame.sprite.Sprite):
             self.position = pos
             self.coords = locate(self.position)
             self.rect = pygame.Rect(self.coords[0],self.coords[1],63,63)
+            if self.colour == 'w':
+                board.wk = self.position
+            elif self.colour == 'b':
+                board.bk = self.position
             if self.poshistory[-1] == self.position:
-                return True
+                return True, board
             else:
-                return False
+                return False, board
         else:
-            return True
+            return True, board
     
     def legalMoves(self,board):
         temp = []
@@ -215,6 +270,7 @@ class King(pygame.sprite.Sprite):
         elif self.colour =='b':
             return 'k'
 
+
 class Rook(pygame.sprite.Sprite):
     def __init__(self, colour, position):
         pygame.sprite.Sprite.__init__(self)
@@ -226,6 +282,7 @@ class Rook(pygame.sprite.Sprite):
         self.rect = pygame.Rect(self.coords[0],self.coords[1],63,63)
         self.symbol = 'R'
         self.poshistory = []
+        self.matrix = chessToMatrix(self.position)
 
     def move(self,pos,board):
         if pos in self.legalMoves(board):
@@ -234,45 +291,62 @@ class Rook(pygame.sprite.Sprite):
             self.coords = locate(self.position)
             self.rect = pygame.Rect(self.coords[0],self.coords[1],63,63)
             if self.poshistory[-1] == self.position:
-                return True
+                return True, board
             else:
-                return False
+                return False, board
         else:
-            return True
+            return True, board
 
     def legalMoves(self,board):
         temp = []
         self.movement = []
         self.matrix = chessToMatrix(self.position)
-        self.matrix = chessToMatrix(self.position)
         
+
         #Find all moves
-        start = int(number(self.position[0]))
-        #Find vertical possibilities
-        for i in range(start,87,10):
-            if i == start:
-                temp.append(matrixToChess('0'+str(i)))
-            else:
-                temp.append(matrixToChess(i))
-        #Find horizontal possibilities
-        start = chessToMatrix(self.position)[0]
-        #print('start: ',start)
-        #print(int(start+'0'),' - ',int(start+'8'))
-        for i in range(int(start+'0'),int(start+'8')):
-            #print('i: ',i)
-            if len(str(i)) == 2:
-                temp.append(matrixToChess(i))
-            else:
-                temp.append(matrixToChess('0'+str(i)))
+        start = int(chessToMatrix(self.position)[1])
+        start1 = int(chessToMatrix(self.position)[0])
+        #Find vertical-up possibilities
+        for i in range(start1,-1,-1):
+            temp.append(matrixToChess(str(i)+str(start)))
+            if matrixToChess(str(i)+str(start)) == self.position:
+                pass
+            elif board.array[i][start] != None:
+                break
+        # Find veritcal-down possibilities
+        for i in range(start1+1,8,1):
+            temp.append(matrixToChess(str(i)+str(start)))
+            if matrixToChess(str(i)+str(start)) == self.position:
+                pass
+            elif board.array[i][start] != None:
+                break
+
+        #Find horizontal-left possibilities
+        start = int(chessToMatrix(self.position)[0])
+        start1 = int(chessToMatrix(self.position)[1])
+        for i in range(start1,-1,-1):
+            temp.append(matrixToChess(str(start)+str(i)))
+            if matrixToChess(str(start)+str(i)) == self.position:
+                pass
+            elif board.array[start][i] != None:
+                break
+        # Find horizontal-right possibilities
+        for i in range(start1,8,1):
+            temp.append(matrixToChess(str(start)+str(i)))
+            if matrixToChess(str(start)+str(i)) == self.position:
+                pass
+            elif board.array[start][i] != None:
+                break
 
         #Remove moves that go off the board
         for move in temp:
-            #print(move,move)
-            if move != None:
-                self.movement.append(move)
+            if move is not None:
+                self.movement.append(move)          
 
         #Remove yourself
-        if self.position in self.movement:
+        #print(self.movement)
+        #print(self.position)
+        while self.position in self.movement:
             self.movement.pop(self.movement.index(self.position))
 
         #Check if spaces are available
@@ -284,6 +358,8 @@ class Rook(pygame.sprite.Sprite):
 
         for i in list(self.spaces.keys()):
             piece = self.spaces[i]
+            #print(self.spaces)
+            #print(piece)
             #print(self.spaces)
             #print(piece)
             if piece.colour == self.colour:
@@ -298,6 +374,7 @@ class Rook(pygame.sprite.Sprite):
         elif self.colour =='b':
             return 'r'
 
+
 class Knight(pygame.sprite.Sprite):
     def __init__(self, colour, position):
         pygame.sprite.Sprite.__init__(self)
@@ -309,6 +386,7 @@ class Knight(pygame.sprite.Sprite):
         self.rect = pygame.Rect(self.coords[0],self.coords[1],63,63)
         self.symbol = 'N'
         self.poshistory = []
+        self.matrix = chessToMatrix(self.position)
 
     def move(self,pos,board):
         if pos in self.legalMoves(board):
@@ -317,11 +395,11 @@ class Knight(pygame.sprite.Sprite):
             self.coords = locate(self.position)
             self.rect = pygame.Rect(self.coords[0],self.coords[1],63,63)
             if self.poshistory[-1] == self.position:
-                return True
+                return True, board
             else:
-                return False
+                return False, board
         else:
-            return True
+            return True, board
 
     def legalMoves(self,board):
         temp = []
@@ -330,20 +408,14 @@ class Knight(pygame.sprite.Sprite):
         self.matrix = chessToMatrix(self.position)
         
         #Find all moves
-        print(self.matrix)
-        temp.append(matrixToChess(int(self.matrix)+11))
-        temp.append(matrixToChess(int(self.matrix)+10))
-        temp.append(matrixToChess(int(self.matrix)+9))
-        if len(str(int(self.matrix)+1)) == 1:
-            temp.append(matrixToChess('0'+str(int(self.matrix)+1)))
-        if len(str(int(self.matrix)-1)) == 1:
-            temp.append(matrixToChess('0'+str(int(self.matrix)-1)))
-        if len(str(int(self.matrix)-9)) == 1:
-            temp.append(matrixToChess('0'+str(int(self.matrix)-9)))
-        if len(str(int(self.matrix)-10)) == 1:
-            temp.append(matrixToChess('0'+str(int(self.matrix)-10)))
-        if len(str(int(self.matrix)-11)) == 1:
-            temp.append(matrixToChess('0'+str(int(self.matrix)-11)))
+        temp.append(matrixToChess(int(self.matrix)+21))
+        temp.append(matrixToChess(int(self.matrix)+19))
+        temp.append(matrixToChess(int(self.matrix)+12))
+        temp.append(matrixToChess(int(self.matrix)+8))
+        temp.append(matrixToChess(int(self.matrix)-8))
+        temp.append(matrixToChess(int(self.matrix)-12))
+        temp.append(matrixToChess(int(self.matrix)-21))
+        temp.append(matrixToChess(int(self.matrix)-19))
 
         #Remove moves that go off the board
         for move in temp:
@@ -374,68 +446,125 @@ class Knight(pygame.sprite.Sprite):
         elif self.colour =='b':
             return 'n'
 
+
 class Bishop(pygame.sprite.Sprite):
     def __init__(self, colour, position):
         pygame.sprite.Sprite.__init__(self)
         self.value = 4
         self.colour = colour
-        self.image = pygame.transform.scale(pygame.image.load('wikipedia/'+self.colour[0]+'B.png'),(63,63))
+        self.image = pygame.transform.scale(
+            pygame.image.load('wikipedia/'+self.colour[0]+'B.png'), (63, 63))
         self.position = position
         self.coords = locate(self.position)
-        self.rect = pygame.Rect(self.coords[0],self.coords[1],63,63)
+        self.rect = pygame.Rect(self.coords[0], self.coords[1], 63, 63)
         self.symbol = 'B'
         self.poshistory = []
+        self.matrix = chessToMatrix(self.position)
 
-    def move(self,pos,board):
+    def move(self, pos, board):
         if pos in self.legalMoves(board):
             self.poshistory.append(self.position)
             self.position = pos
             self.coords = locate(self.position)
-            self.rect = pygame.Rect(self.coords[0],self.coords[1],63,63)
+            self.rect = pygame.Rect(self.coords[0], self.coords[1], 63, 63)
             if self.poshistory[-1] == self.position:
-                return True
+                return True, board
             else:
-                return False
+                return False, board
         else:
-            return True
+            return True, board
 
-    def legalMoves(self,board):
+    def legalMoves(self, board):
         temp = []
         self.movement = []
         self.matrix = chessToMatrix(self.position)
         self.matrix = chessToMatrix(self.position)
         
-        #Find all moves
-        for i in range(-11,-99,-11):
-            #if len(str(i)) == 0:
-            print(str(i))
+        # Find all moves
+        for i in range(-11, -99, -11):
+            try:
+                if int(str(i+int(self.matrix))[1]) == 9:
+                    break
+            except IndexError:
+                pass
             temp.append(matrixToChess(int(self.matrix)+i))
-        temp.append(matrixToChess(int(self.matrix)+11))
-        temp.append(matrixToChess(int(self.matrix)+10))
-        temp.append(matrixToChess(int(self.matrix)+9))
-        temp.append(matrixToChess(int(self.matrix)+1))
-        temp.append(matrixToChess(int(self.matrix)-1))
-        temp.append(matrixToChess(int(self.matrix)-9))
-        temp.append(matrixToChess(int(self.matrix)-10))
-        temp.append(matrixToChess(int(self.matrix)-11))
+            mat = str(int(self.matrix)+i)
+            if len(mat) == 1:
+                mat = '0'+mat
+            if matrixToChess(int(self.matrix)+i) == None:
+                pass
+            elif board.array[int(mat[0])][int(mat[1])] != None:
+                break
+        for i in range(11, 99, 11):
+            if len(str(i+int(self.matrix))) > 2:
+                pass
+            elif int(str(i+int(self.matrix))[1]) > 7:
+                print(int(str(i+int(self.matrix))[1]))
+                break
+            else:
+                temp.append(matrixToChess(int(self.matrix)+i))
+                print(matrixToChess(int(self.matrix)+i))
+            mat = str(int(self.matrix)+i)
+            if len(mat) == 1:
+                mat = '0'+mat
+            if matrixToChess(int(self.matrix)+i) == None:
+                pass
+            elif board.array[int(mat[0])][int(mat[1])] != None:
+                break
+        for i in range(9, 99, 9):
+            if len(str(i+int(self.matrix))) > 2:
+                pass
+            elif int(str(i+int(self.matrix))[1]) == 9:
+                break
+            else:
+                temp.append(matrixToChess(int(self.matrix)+i))
+            mat = str(int(self.matrix)+i)
+            if len(mat) == 1:
+                mat = '0'+mat
+            if matrixToChess(int(self.matrix)+i) == None:
+                pass
+            elif board.array[int(mat[0])][int(mat[1])] != None:
+                break
+        for i in range(-9, -99, -9):
+            try:
+                if int(str(i+int(self.matrix))[1]) == 8:
+                    break
+                else:
+                    temp.append(matrixToChess(int(self.matrix)+i))
+                mat = str(int(self.matrix)+i)
+                if len(mat) == 1:
+                    mat = '0'+mat
+                if matrixToChess(int(self.matrix)+i) == None:
+                    pass
+                elif board.array[int(mat[0])][int(mat[1])] != None:
+                    break
+            except:
+                temp.append(matrixToChess(int(self.matrix)+i))
+                mat = str(int(self.matrix)+i)
+                if len(mat) == 1:
+                    mat = '0'+mat
+                if matrixToChess(int(self.matrix)+i) == None:
+                    pass
+                elif board.array[int(mat[0])][int(mat[1])] != None:
+                    break
 
-        #Remove moves that go off the board
+        # Remove moves that go off the board
         for move in temp:
-            #print(move,move)
-            if move != None:
+            # print(move,move)
+            if move is not None:
                 self.movement.append(move)
 
-        #Check if spaces are available
+        # Check if spaces are available
         self.spaces = {}
         for move in self.movement:
-            piece = board.array[int(chessToMatrix(move)[0])][int(chessToMatrix(move)[1])]
+            loc = chessToMatrix(move)
+            piece = board.array[int(loc[0])][int(loc[1])]
             if piece is not None:
                 self.spaces[move] = piece
-
         for i in list(self.spaces.keys()):
             piece = self.spaces[i]
-            #print(self.spaces)
-            #print(piece)
+            # print(self.spaces)
+            # print(piece)
             if piece.colour == self.colour:
                 j = self.movement.index(i)
                 self.movement.pop(j)
@@ -448,6 +577,7 @@ class Bishop(pygame.sprite.Sprite):
         elif self.colour =='b':
             return 'b'
 
+
 class Queen(pygame.sprite.Sprite):
     def __init__(self, colour, position):
         pygame.sprite.Sprite.__init__(self)
@@ -459,6 +589,7 @@ class Queen(pygame.sprite.Sprite):
         self.rect = pygame.Rect(self.coords[0],self.coords[1],63,63)
         self.symbol = 'Q'
         self.poshistory = []
+        self.matrix = chessToMatrix(self.position)
 
     def move(self,pos,board):
         if pos in self.legalMoves(board):
@@ -467,11 +598,11 @@ class Queen(pygame.sprite.Sprite):
             self.coords = locate(self.position)
             self.rect = pygame.Rect(self.coords[0],self.coords[1],63,63)
             if self.poshistory[-1] == self.position:
-                return True
+                return True, board
             else:
-                return False
+                return False, board
         else:
-            return True
+            return True, board
 
     def legalMoves(self,board):
         temp = []
@@ -479,21 +610,115 @@ class Queen(pygame.sprite.Sprite):
         self.matrix = chessToMatrix(self.position)
         self.matrix = chessToMatrix(self.position)
         
-        #Find all moves
-        temp.append(matrixToChess(int(self.matrix)+11))
-        temp.append(matrixToChess(int(self.matrix)+10))
-        temp.append(matrixToChess(int(self.matrix)+9))
-        temp.append(matrixToChess(int(self.matrix)+1))
-        temp.append(matrixToChess(int(self.matrix)-1))
-        temp.append(matrixToChess(int(self.matrix)-9))
-        temp.append(matrixToChess(int(self.matrix)-10))
-        temp.append(matrixToChess(int(self.matrix)-11))
+        #Find diagonals
+        for i in range(-11, -99, -11):
+            try:
+                if int(str(i+int(self.matrix))[1]) == 9:
+                    break
+            except IndexError:
+                pass
+            temp.append(matrixToChess(int(self.matrix)+i))
+            mat = str(int(self.matrix)+i)
+            if len(mat) == 1:
+                mat = '0'+mat
+            if matrixToChess(int(self.matrix)+i) == None:
+                pass
+            elif board.array[int(mat[0])][int(mat[1])] != None:
+                break
+        for i in range(11, 99, 11):
+            if len(str(i+int(self.matrix))) > 2:
+                pass
+            elif int(str(i+int(self.matrix))[1]) > 7:
+                break
+            else:
+                temp.append(matrixToChess(int(self.matrix)+i))
+            mat = str(int(self.matrix)+i)
+            if len(mat) == 1:
+                mat = '0'+mat
+            if matrixToChess(int(self.matrix)+i) == None:
+                pass
+            elif board.array[int(mat[0])][int(mat[1])] != None:
+                break
+        for i in range(9, 99, 9):
+            if len(str(i+int(self.matrix))) > 2:
+                pass
+            elif int(str(i+int(self.matrix))[1]) == 9:
+                break
+            else:
+                temp.append(matrixToChess(int(self.matrix)+i))
+            mat = str(int(self.matrix)+i)
+            if len(mat) == 1:
+                mat = '0'+mat
+            if matrixToChess(int(self.matrix)+i) == None:
+                pass
+            elif board.array[int(mat[0])][int(mat[1])] != None:
+                break
+        for i in range(-9, -99, -9):
+            try:
+                if int(str(i+int(self.matrix))[1]) == 8:
+                    break
+                else:
+                    temp.append(matrixToChess(int(self.matrix)+i))
+                mat = str(int(self.matrix)+i)
+                if len(mat) == 1:
+                    mat = '0'+mat
+                if matrixToChess(int(self.matrix)+i) == None:
+                    pass
+                elif board.array[int(mat[0])][int(mat[1])] != None:
+                    break
+            except:
+                temp.append(matrixToChess(int(self.matrix)+i))
+                mat = str(int(self.matrix)+i)
+                if len(mat) == 1:
+                    mat = '0'+mat
+                if matrixToChess(int(self.matrix)+i) == None:
+                    pass
+                elif board.array[int(mat[0])][int(mat[1])] != None:
+                    break
+
+        #Find vertical-up possibilities
+        start = int(chessToMatrix(self.position)[1])
+        start1 = int(chessToMatrix(self.position)[0])
+        for i in range(start1,-1,-1):
+            temp.append(matrixToChess(str(i)+str(start)))
+            if matrixToChess(str(i)+str(start)) == self.position:
+                pass
+            elif board.array[i][start] != None:
+                break
+        # Find veritcal-down possibilities
+        for i in range(start1+1,8,1):
+            temp.append(matrixToChess(str(i)+str(start)))
+            if matrixToChess(str(i)+str(start)) == self.position:
+                pass
+            elif board.array[i][start] != None:
+                break
+
+        #Find horizontal-left possibilities
+        start = int(chessToMatrix(self.position)[0])
+        start1 = int(chessToMatrix(self.position)[1])
+        for i in range(start1,-1,-1):
+            temp.append(matrixToChess(str(start)+str(i)))
+            if matrixToChess(str(start)+str(i)) == self.position:
+                pass
+            elif board.array[start][i] != None:
+                break
+        # Find horizontal-right possibilities
+        for i in range(start1,8,1):
+            temp.append(matrixToChess(str(start)+str(i)))
+            if matrixToChess(str(start)+str(i)) == self.position:
+                pass
+            elif board.array[start][i] != None:
+                break
 
         #Remove moves that go off the board
         for move in temp:
             #print(move,move)
             if move != None:
                 self.movement.append(move)
+
+        #Remove yourself
+        while self.position in self.movement:
+            self.movement.pop(self.movement.index(self.position))
 
         #Check if spaces are available
         self.spaces = {}
@@ -518,6 +743,7 @@ class Queen(pygame.sprite.Sprite):
         elif self.colour =='b':
             return 'q'
 
+
 class Pawn(pygame.sprite.Sprite):
     def __init__(self, colour, position):
         pygame.sprite.Sprite.__init__(self)
@@ -529,6 +755,7 @@ class Pawn(pygame.sprite.Sprite):
         self.rect = pygame.Rect(self.coords[0],self.coords[1],63,63)
         self.symbol = 'P'
         self.poshistory = []
+        self.matrix = chessToMatrix(self.position)
 
     def move(self,pos,board):
         if pos in self.legalMoves(board):
@@ -537,11 +764,11 @@ class Pawn(pygame.sprite.Sprite):
             self.coords = locate(self.position)
             self.rect = pygame.Rect(self.coords[0],self.coords[1],63,63)
             if self.poshistory[-1] == self.position:
-                return True
+                return True, board
             else:
-                return False
+                return False, board
         else:
-            return True
+            return True, board
 
     def legalMoves(self,board):
         temp = []
@@ -552,14 +779,23 @@ class Pawn(pygame.sprite.Sprite):
         #Find all moves
         if self.colour == 'w':
             temp.append(matrixToChess(int(self.matrix)-10))
-            #Move 2 squares from start
-            if len(self.poshistory) == 0:
+            # Move 2 squares from start
+            # Check there isn't a piece in the way
+            one_forward = str(int(self.matrix)-10)
+            if len(self.poshistory) == 0 and board.array[int(one_forward[0])][int(one_forward[1])] == None:
                 temp.append(matrixToChess(int(self.matrix)-20))
         if self.colour == 'b':
             temp.append(matrixToChess(int(self.matrix)+10))
-            #Move 2 squares from start
-            if len(self.poshistory) == 0:
+            # Move 2 squares from start
+            # Check there isn't a piece in the way
+            one_forward = str(int(self.matrix)+10)
+            if len(self.poshistory) == 0 and board.array[int(one_forward[0])][int(one_forward[1])] == None:
                 temp.append(matrixToChess(int(self.matrix)+20))
+
+        for move in temp:
+            tempmatrix = chessToMatrix(move)
+            if board.array[int(tempmatrix[0])][int(tempmatrix[1])] != None:
+                temp.pop(temp.index(move))
 
         #Attacking moves
         if self.colour == 'w':
@@ -581,7 +817,7 @@ class Pawn(pygame.sprite.Sprite):
             right = str(int(self.matrix)+9)
             if len(right) == 1:
                 right = '0'+right
-            print('left: ',left)
+            #print('left: ',left)
 
             if left[1] == '8' or left[1] == '9':
                 pass
@@ -626,6 +862,17 @@ class Pawn(pygame.sprite.Sprite):
 
 class Board():
     def __init__(self):
+        # Board for testing purposes
+        self.arrays = [
+            [None for x in range(8)],
+            [None for x in range(8)],
+            [None for x in range(8)],
+            [None,None,None,None,None,None,None,None],
+            [None for x in range(8)],
+            [None,None,None,Rook('w','d3'),None,None,None,None],
+            [None for x in range(8)],
+            [None for x in range(8)],
+        ]
         self.array = [
             [Rook('b', 'a8'),Knight('b','b8'),Bishop('b','c8'),Queen('b','d8'),King('b','e8'),Bishop('b','f8'),Knight('b','g8'),Rook('b','h8')],
             [Pawn('b', 'a7'),Pawn('b','b7'),Pawn('b','c7'),Pawn('b','d7'),Pawn('b','e7'),Pawn('b','f7'),Pawn('b','g7'),Pawn('b','h7')],
@@ -636,7 +883,5 @@ class Board():
             [Pawn('w','a2'),Pawn('w','b2'),Pawn('w','c2'),Pawn('w','d2'),Pawn('w','e2'),Pawn('w','f2'),Pawn('w','g2'),Pawn('w','h2')],
             [Rook('w','a1'),Knight('w','b1'),Bishop('w','c1'),Queen('w','d1'),King('w','e1'),Bishop('w','f1'),Knight('w','g1'),Rook('w','h1')]
         ]
-
-#class Bishop():
-#a = King('w')
-#a.legalMoves()
+        self.wk = 'e1'
+        self.bk = 'e8'

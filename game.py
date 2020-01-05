@@ -18,6 +18,7 @@ clock = pygame.time.Clock()
 
 selected = False
 nomove = False
+check = (False, )
 
 board = Board()
 all_sprites = pygame.sprite.Group()
@@ -38,9 +39,8 @@ while running:
         if selected.colour == turn.colour:
             selected.coords = (pygame.mouse.get_pos()[0]-31.25,pygame.mouse.get_pos()[1]-31.25)
             for square in selected.legalMoves(board):
+                #print('square: ',square)
                 coords = locate(square)
-                #print(selected.legalMoves(board))
-                #print(selected.position)
                 available_squares.append(pygame.Rect(coords[0]+(62.5*3/8),coords[1]+(62.5*3/8),15.5125,15.5125))
         else:
             selected = False
@@ -48,7 +48,7 @@ while running:
         if event.type == pygame.QUIT:
             running = False
         if event.type == MOUSEBUTTONUP:
-            held = False
+            pass
         if event.type == MOUSEBUTTONDOWN and selected == False:
             for i in board.array:
                 for j in i:
@@ -60,13 +60,9 @@ while running:
                             posi = board.array.index(i)
                             #print(posj,posi)
         elif event.type == MOUSEBUTTONDOWN:
-            #if selected.position == coordToSquare(pygame.mouse.get_pos()):
-                #nomove = True
-            #print(selected.position)
-            #print(coordToSquare(pygame.mouse.get_pos()))
-            #selected.coords = locate(coordToSquare(pygame.mouse.get_pos()))
-            nomove = selected.move(coordToSquare(pygame.mouse.get_pos()),board)
+            nomove, board = selected.move(coordToSquare(pygame.mouse.get_pos()),board)
             matrixloc = chessToMatrix(selected.position)
+            print(board.wk,board.bk)
 
             if not nomove:
                 board.array[posi][posj] = None
@@ -76,25 +72,20 @@ while running:
                 if newsquare != None:
                     captured.add(newsquare)
                 board.array[int(matrixloc[0])][int(matrixloc[1])] = selected
-                #print(board.array)
                 available_squares = []
 
                 #Finish turn
+                check = checkCheck(board,turn.colour)
                 turn.completeTurn()
                 selected = False
                 matrixloc = None
-            #print(matrixloc)
-            #print(board.array)
-            #selected.position = coordToSquare(selected.coords)
-            #selected.update_rect()
-
             
             if nomove:
                 #Snap piece back to square
                 selected.coords = locate(selected.position)
-                available_squares = []
                 selected = False
-            #Remove available square indicator                
+            #Remove available square indicator    
+            available_squares = []            
 
             nomove = False
 
@@ -154,6 +145,14 @@ while running:
         sideBar.blit(pygame.transform.scale(pygame.image.load('wikipedia/'+piece.colour+piece.symbol+'.png'),(30,30)),(x,y))
 
     pygame.draw.line(sideBar, purple, (0,250), (250,250),3)
+
+    if check[0] == True:
+        if check[1] == 'w':
+            loc = (75,225)
+        elif check[1] == 'b':
+            loc = (75,275)
+        text = font.render('Check', True, purple)
+        sideBar.blit(text, loc) 
     screen.blit(sideBar, (600,50))
 
     for square in available_squares:
