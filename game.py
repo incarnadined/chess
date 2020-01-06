@@ -10,6 +10,7 @@ SCREEN_HEIGHT = 600
 purple = (84, 100, 137)
 lightpurple = (153, 165, 193) 
 blue = (0,0,128)
+truepurple = (106,13,173)
 available_squares = []
 
 # Set up the drawing window
@@ -18,7 +19,9 @@ clock = pygame.time.Clock()
 
 selected = False
 nomove = False
-check = {'w':False,'b':False}
+check = {'w':False,'b':False,'wt':False,'bt':False}
+checkmate = False
+loc = False
 
 board = Board()
 all_sprites = pygame.sprite.Group()
@@ -77,6 +80,16 @@ while running:
                 #Finish turn
                 #check = checkCheck(board.fen)
                 check = checkCheck(board, selected, coordToSquare(pygame.mouse.get_pos()), check)
+                if check['w'] == True:
+                    king = board.array[int(chessToMatrix(board.wk)[0])][int(chessToMatrix(board.wk)[1])]
+                    checkmate = checkMate(board, king, check)
+                    checkmatecolour = 'w'
+                elif check['b'] == True:
+                    king = board.array[int(chessToMatrix(board.bk)[0])][int(chessToMatrix(board.bk)[1])]
+                    checkmate = checkMate(board, king, check)
+                    checkmatecolour = 'b'
+                print(checkmate)
+
                 if check[turn.colour] == True:
                     if capture == True:
                         board.array[int(matrixloc[0])][int(matrixloc[1])] = captured.array[-1]
@@ -160,15 +173,23 @@ while running:
 
     pygame.draw.line(sideBar, purple, (0,250), (250,250),3)
 
-    if check['w'] == True:
-        loc = (75,225)
-        text = font.render('Check', True, purple)
-        sideBar.blit(text, loc) 
+    if checkmate == True:
+        if checkmatecolour == 'w':
+            loc = (30,220)
+            text = font.render('Checkmate!', True, truepurple)
+        if checkmatecolour == 'b':
+            loc = (30,275)
+            text = font.render('Checkmate!', True, truepurple)
+    elif check['w'] == True:
+        loc = (75,220)
+        text = font.render('Check', True, truepurple)
     elif check['b'] == True:
         loc = (75,275)
-        text = font.render('Check', True, purple)
-        sideBar.blit(text, loc) 
+        text = font.render('Check', True, truepurple)
     
+    if loc != False:
+        sideBar.blit(text, loc) 
+        loc = False
     screen.blit(sideBar, (600,50))
 
     for square in available_squares:
