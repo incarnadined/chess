@@ -18,7 +18,7 @@ clock = pygame.time.Clock()
 
 selected = False
 nomove = False
-check = (False, )
+check = {'w':False,'b':False}
 
 board = Board()
 all_sprites = pygame.sprite.Group()
@@ -33,13 +33,11 @@ captured = Taken()
 # Run until the user asks to quit
 running = True
 while running:
-
     if selected:
         #Check it is the turn of the moved piece
         if selected.colour == turn.colour:
             selected.coords = (pygame.mouse.get_pos()[0]-31.25,pygame.mouse.get_pos()[1]-31.25)
             for square in selected.legalMoves(board):
-                #print('square: ',square)
                 coords = locate(square)
                 available_squares.append(pygame.Rect(coords[0]+(62.5*3/8),coords[1]+(62.5*3/8),15.5125,15.5125))
         else:
@@ -52,7 +50,6 @@ while running:
         if event.type == MOUSEBUTTONDOWN and selected == False:
             for i in board.array:
                 for j in i:
-                    #print(i,j)
                     if j != None:
                         if j.rect.collidepoint(pygame.mouse.get_pos()[0],pygame.mouse.get_pos()[1]):
                             selected = j
@@ -61,9 +58,8 @@ while running:
                             #print(posj,posi)
         elif event.type == MOUSEBUTTONDOWN:
             board.updatefen(turn.colour)
-            print(selected.position)
-            check = checkCheck(board, selected, coordToSquare(pygame.mouse.get_pos()), turn.colour)
             print(check)
+            origpos = selected.position
             nomove, board = selected.move(coordToSquare(pygame.mouse.get_pos()),board)
             matrixloc = chessToMatrix(selected.position)
 
@@ -73,15 +69,30 @@ while running:
                 #print(matrixloc)
                 newsquare = board.array[int(matrixloc[0])][int(matrixloc[1])]
                 if newsquare != None:
+                    capture = True
                     captured.add(newsquare)
                 board.array[int(matrixloc[0])][int(matrixloc[1])] = selected
                 available_squares = []
 
                 #Finish turn
                 #check = checkCheck(board.fen)
-                turn.completeTurn()
-                selected = False
-                matrixloc = None
+                check = checkCheck(board, selected, coordToSquare(pygame.mouse.get_pos()), check)
+                if check[turn.colour] == True:
+                    if capture == True:
+                        board.array[int(matrixloc[0])][int(matrixloc[1])] = captured.array[-1]
+                        captured.remove()
+                    else:
+                        board.array[int(matrixloc[0])][int(matrixloc[1])] = None
+                    board.array[posi][posj] = selected
+                    selected.position = origpos
+                    selected.coords = locate(selected.position)
+                    selected.rect = pygame.Rect(selected.coords[0],selected.coords[1],63,63)
+                    check[turn.colour] = False
+                else:
+                    turn.completeTurn()
+                    matrixloc = None
+                    capture = False
+                    selected = False
 
             if nomove:
                 #Snap piece back to square
@@ -91,12 +102,12 @@ while running:
             available_squares = []            
 
             nomove = False
+            selected = False
 
             #Reset for new piece selection
             
         
     
-
     # Fill the background with purple
     screen.fill(purple)
 
@@ -149,13 +160,15 @@ while running:
 
     pygame.draw.line(sideBar, purple, (0,250), (250,250),3)
 
-    if check[0] == True:
-        if check[1] == 'w':
-            loc = (75,225)
-        elif check[1] == 'b':
-            loc = (75,275)
+    if check['w'] == True:
+        loc = (75,225)
         text = font.render('Check', True, purple)
         sideBar.blit(text, loc) 
+    elif check['b'] == True:
+        loc = (75,275)
+        text = font.render('Check', True, purple)
+        sideBar.blit(text, loc) 
+    
     screen.blit(sideBar, (600,50))
 
     for square in available_squares:

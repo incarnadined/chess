@@ -1,7 +1,5 @@
 import pygame
-import chess
 import math
-import copy
 
 
 def number(letter):
@@ -114,52 +112,31 @@ def matrixToChess(matrix):
         return column+row #c7
 
 
-def checkCheck(board, piece, mov, colour):
-    captured = []
-    matrix = chessToMatrix(piece.position)
-    newmat = chessToMatrix(mov)
-    piece.move(mov,board)
-
-    board.array[int(matrix[0])][int(matrix[1])] = None
-    newsquare = board.array[int(newmat[0])][int(newmat[0])]
-    if newsquare != None:
-        captured.append(newsquare)
-    board.array[int(newmat[0])][int(newmat[1])] = piece
-
-    if colour == 'w':
-        kingloc = board.wk
-    elif colour == 'b':
-        kingloc = board.bk
-
+def checkCheck(board, piece, mov, check):
+    
+    kingloc = board.wk
     for item in board.array:
         for ite in item:
             if ite is not None:
                 if kingloc in ite.legalMoves(board):
-                    piece.position = piece.poshistory[-1]
-                    piece.poshistory.pop(-1)
-                    piece.coords = locate(piece.position)
-                    piece.rect = pygame.Rect(piece.coords[0],piece.coords[1],63,63)
+                    print('hello')
+                    check['w'] = True
+                    return check
+                else:
+                    check['w'] = False
 
-                    board.array[int(matrix[0])][int(matrix[1])] = piece
-                    newsquare = board.array[int(newmat[0])][int(newmat[0])]
-                    if len(captured) != 0:
-                        board.array[int(newmat[0])][int(newmat[1])] = captured[0]
-                    else:
-                        board.array[int(newmat[0])][int(newmat[1])] = None
-                    return (True,colour)
+    kingloc = board.bk
+    for item in board.array:
+        for ite in item:
+            if ite is not None:
+                if kingloc in ite.legalMoves(board):
+                    print('hello')
+                    check['b'] = True
+                    return check
+                else:
+                    check['b'] = False
 
-    piece.position = piece.poshistory[-1]
-    piece.poshistory.pop(-1)
-    piece.coords = locate(piece.position)
-    piece.rect = pygame.Rect(piece.coords[0],piece.coords[1],63,63)
-    
-    board.array[int(matrix[0])][int(matrix[1])] = piece
-    newsquare = board.array[int(newmat[0])][int(newmat[0])]
-    if len(captured) != 0:
-        board.array[int(newmat[0])][int(newmat[1])] = captured[0]
-    else:
-        board.array[int(newmat[0])][int(newmat[1])] = None
-    return (False,colour)
+    return check
 
 
 class Turn():
@@ -190,6 +167,10 @@ class Taken():
 
     def add(self,piece):
         self.array.append(piece)
+        self.sort()
+
+    def remove(self):
+        self.array.pop(-1)
         self.sort()
 
     def sort(self):
@@ -275,9 +256,9 @@ class King(pygame.sprite.Sprite):
 
     def __repr__(self):
         if self.colour == 'w':
-            return 'K'
+            return '♔'
         elif self.colour =='b':
-            return 'k'
+            return '♚'
 
 
 class Rook(pygame.sprite.Sprite):
@@ -379,9 +360,9 @@ class Rook(pygame.sprite.Sprite):
 
     def __repr__(self):
         if self.colour == 'w':
-            return 'R'
+            return '♖'
         elif self.colour =='b':
-            return 'r'
+            return '♜'
 
 
 class Knight(pygame.sprite.Sprite):
@@ -451,9 +432,9 @@ class Knight(pygame.sprite.Sprite):
     
     def __repr__(self):
         if self.colour == 'w':
-            return 'N'
+            return '♘'
         elif self.colour =='b':
-            return 'n'
+            return '♞'
 
 
 class Bishop(pygame.sprite.Sprite):
@@ -582,9 +563,9 @@ class Bishop(pygame.sprite.Sprite):
     
     def __repr__(self):
         if self.colour == 'w':
-            return 'B'
+            return '♗'
         elif self.colour =='b':
-            return 'b'
+            return '♝'
 
 
 class Queen(pygame.sprite.Sprite):
@@ -748,9 +729,9 @@ class Queen(pygame.sprite.Sprite):
     
     def __repr__(self):
         if self.colour == 'w':
-            return 'Q'
+            return '♕'
         elif self.colour =='b':
-            return 'q'
+            return '♛'
 
 
 class Pawn(pygame.sprite.Sprite):
@@ -868,9 +849,9 @@ class Pawn(pygame.sprite.Sprite):
     
     def __repr__(self):
         if self.colour == 'w':
-            return 'P'
+            return '♙'
         elif self.colour =='b':
-            return 'p'
+            return '♟'
 
 
 class Board():
