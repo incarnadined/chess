@@ -90,8 +90,8 @@ def coordToSquare(coord):
 
 
 def chessToMatrix(chess):
-    #print('\n')
     #print(chess)
+    chess = str(chess)
     row = str((int(chess[1]) - 8)*-1)
     column = number(chess[0])
     #print(row)
@@ -113,12 +113,12 @@ def matrixToChess(matrix):
 
 
 def checkCheck(board, piece, mov, check):
-    
     kingloc = board.wk
     for item in board.array:
         for ite in item:
             if ite is not None:
                 if kingloc in ite.legalMoves(board):
+                    board.canCastle = {'wk': False, 'wq': False, 'bk': False, 'bq': False}
                     check['w'] = True
                     check['wt'] = ite
                     return check
@@ -130,7 +130,7 @@ def checkCheck(board, piece, mov, check):
         for ite in item:
             if ite is not None:
                 if kingloc in ite.legalMoves(board):
-                    print('hello')
+                    board.canCastle = {'wk': False, 'wq': False, 'bk': False, 'bq': False}
                     check['b'] = True
                     check['bt'] = ite
                     return check
@@ -143,7 +143,7 @@ def checkCheck(board, piece, mov, check):
 def checkMate(board, king, check):
     threat = check[king.colour+'t']
     moves = king.legalMoves(board)
-    threat.legalMoves(board)
+    threatmoves = threat.legalMoves(board)
     for path in threat.paths:
         if king.position in threat.paths[path]:
             threatmoves = threat.paths[path]
@@ -154,13 +154,7 @@ def checkMate(board, king, check):
             if j != None:
                 if j.colour == king.colour:
                     if threat.position in j.legalMoves(board):
-                        if j.symbol.lower() == 'k':
-                            if checkCheck(board, j, threat.position, check)[king.colour] == True:
-                                pass
-                            else:
-                                return False
-                        else:
-                            return False
+                        return False
                         print('hlo')
     
     # Can a piece of the kings colour get in the way
@@ -263,6 +257,34 @@ class King(pygame.sprite.Sprite):
 
     def move(self,pos,board):
         if pos in self.legalMoves(board):
+            try:
+                if pos == matrixToChess(int(self.matrix)+2):
+                    if self.colour == 'w':
+                        rook = board.array[int(chessToMatrix('h1')[0])][int(chessToMatrix('h1')[1])]
+                        board.array[int(chessToMatrix('h1')[0])][int(chessToMatrix('h1')[1])] = None
+                        rook.move('f1',board)
+                        board.array[int(chessToMatrix('f1')[0])][int(chessToMatrix('f1')[1])] = rook
+                    if self.colour == 'b':
+                        rook = board.array[int(chessToMatrix('h8')[0])][int(chessToMatrix('h8')[1])]
+                        board.array[int(chessToMatrix('h8')[0])][int(chessToMatrix('h8')[1])] = None
+                        rook.move('f8',board)
+                        board.array[int(chessToMatrix('f8')[0])][int(chessToMatrix('f8')[1])] = rook
+
+                if pos == matrixToChess(int(self.matrix)-2):
+                    if self.colour == 'w':
+                        rook = board.array[int(chessToMatrix('a1')[0])][int(chessToMatrix('a1')[1])]
+                        board.array[int(chessToMatrix('a1')[0])][int(chessToMatrix('a1')[1])] = None
+                        rook.move('d1',board)
+                        board.array[int(chessToMatrix('d1')[0])][int(chessToMatrix('d1')[1])] = rook
+                    if self.colour == 'b':
+                        rook = board.array[int(chessToMatrix('a8')[0])][int(chessToMatrix('a8')[1])]
+                        board.array[int(chessToMatrix('a8')[0])][int(chessToMatrix('a8')[1])] = None
+                        rook.move('d8',board)
+                        board.array[int(chessToMatrix('d8')[0])][int(chessToMatrix('d8')[1])] = rook
+            except:
+                pass
+            board.canCastle[self.colour+'k'] = False
+            board.canCastle[self.colour+'k'] = False
             self.poshistory.append(self.position)
             self.position = pos
             self.coords = locate(self.position)
@@ -295,6 +317,30 @@ class King(pygame.sprite.Sprite):
         self.temp.append(matrixToChess(int(self.matrix)-9))
         self.temp.append(matrixToChess(int(self.matrix)-10))
         self.temp.append(matrixToChess(int(self.matrix)-11))
+
+        try:
+            # O-O
+            if len(self.poshistory) == 0:
+                if self.colour == 'w':
+                    rook = board.array[int(chessToMatrix('h1')[0])][int(chessToMatrix('h1')[1])]
+                elif self.colour == 'b':
+                    rook = board.array[int(chessToMatrix('h8')[0])][int(chessToMatrix('h8')[1])]
+                if matrixToChess(int(self.matrix)+1) in rook.legalMoves(board):
+                    print('no')
+                    self.temp.append(matrixToChess(int(self.matrix)+2))
+            
+            # O-O-O 
+            if len(self.poshistory) == 0:
+                if self.colour == 'w':
+                    rook = board.array[int(chessToMatrix('a1')[0])][int(chessToMatrix('a1')[1])]
+                elif self.colour == 'b':
+                    rook = board.array[int(chessToMatrix('a8')[0])][int(chessToMatrix('a8')[1])]
+                if matrixToChess(int(self.matrix)-1) in rook.legalMoves(board):
+                    print('no u')
+                    self.temp.append(matrixToChess(int(self.matrix)-2))
+        except:
+            pass
+
 
         for i in self.temp:
             self.paths['1'].append(i)
@@ -344,6 +390,14 @@ class Rook(pygame.sprite.Sprite):
 
     def move(self,pos,board):
         if pos in self.legalMoves(board):
+            if self.position == 'h1':
+                board.canCastle['wk'] = False
+            if self.position == 'a1':
+                board.canCastle['wq'] = False
+            if self.position == 'a8':
+                board.canCastle['bq'] = False
+            if self.position == 'h8':
+                board.canCastle['bk'] = False
             self.poshistory.append(self.position)
             self.position = pos
             self.coords = locate(self.position)
@@ -976,14 +1030,14 @@ class Board():
     def __init__(self):
         # Board for testing purposes
         self.arrays = [
+            [Rook('b', 'a8'),None,None,None,King('b','e8'),Bishop('b','f8'),Knight('b','g8'),Rook('b','h8')],
+            [Pawn('b', 'a7'),Pawn('b','b7'),Pawn('b','c7'),Pawn('b','d7'),Pawn('b','e7'),Pawn('b','f7'),Pawn('b','g7'),Pawn('b','h7')],
             [None for x in range(8)],
             [None for x in range(8)],
             [None for x in range(8)],
-            [None,None,None,None,None,None,None,None],
             [None for x in range(8)],
-            [None,None,None,Rook('w','d3'),None,None,None,None],
-            [None for x in range(8)],
-            [None for x in range(8)],
+            [Pawn('w','a2'),Pawn('w','b2'),Pawn('w','c2'),Pawn('w','d2'),Pawn('w','e2'),Pawn('w','f2'),Pawn('w','g2'),Pawn('w','h2')],
+            [Rook('w','a1'),None,None,None,King('w','e1'),Bishop('w','f1'),Knight('w','g1'),Rook('w','h1')]
         ]
         self.array = [
             [Rook('b', 'a8'),Knight('b','b8'),Bishop('b','c8'),Queen('b','d8'),King('b','e8'),Bishop('b','f8'),Knight('b','g8'),Rook('b','h8')],
@@ -997,6 +1051,8 @@ class Board():
         ]
         self.wk = 'e1'
         self.bk = 'e8'
+
+        self.canCastle = {'wk': True, 'wq': True, 'bk': True, 'bq': True}
 
         self.updatefen('w')
         

@@ -1,6 +1,7 @@
 from pygame.locals import *
 from models import *
 import pygame
+from random import randint as rand
 
 pygame.init()
 
@@ -11,6 +12,7 @@ purple = (84, 100, 137)
 lightpurple = (153, 165, 193) 
 blue = (0,0,128)
 truepurple = (106,13,173)
+turquoise = (53,153,255)
 available_squares = []
 
 # Set up the drawing window
@@ -22,6 +24,10 @@ nomove = False
 check = {'w':False,'b':False,'wt':False,'bt':False}
 checkmate = False
 loc = False
+info = False
+inforect = False
+movespeed = 10
+start = 0
 
 board = Board()
 all_sprites = pygame.sprite.Group()
@@ -59,6 +65,8 @@ while running:
                             posj = i.index(j)
                             posi = board.array.index(i)
                             #print(posj,posi)
+            if inforect.collidepoint(pygame.mouse.get_pos()[0],pygame.mouse.get_pos()[1]):
+                info = True
         elif event.type == MOUSEBUTTONDOWN:
             board.updatefen(turn.colour)
             print(check)
@@ -100,6 +108,7 @@ while running:
                     selected.position = origpos
                     selected.coords = locate(selected.position)
                     selected.rect = pygame.Rect(selected.coords[0],selected.coords[1],63,63)
+                    selected.poshistory.pop(-1)
                     check[turn.colour] = False
                 else:
                     turn.completeTurn()
@@ -193,7 +202,27 @@ while running:
     screen.blit(sideBar, (600,50))
 
     for square in available_squares:
-        pygame.draw.ellipse(screen,(255,0,0),square)
+        pygame.draw.ellipse(screen,(rand(0,255),rand(0,255),rand(0,255)),square)
+
+
+    infobar = pygame.Surface((875,550))
+    infobar.fill(turquoise)
+
+    if info == False:
+        infoarrow = pygame.Surface((25,50))
+        infoarrow.fill(purple)
+        pygame.draw.ellipse(infoarrow,turquoise,pygame.Rect(0,0,50,50))
+        pygame.draw.polygon(infoarrow,(255,255,255), ((5,25),(20,50//3),(20,(50//3)*2)))
+        screen.blit(infoarrow,(875,100))
+        inforect = pygame.Rect(875,100,25,50)
+    elif info == True:
+        if 900-start >= 25:
+            start+=movespeed
+            screen.blit(infobar, (900-start,25))
+        else:
+            screen.blit(infobar, (25,25))
+        
+
 
     #screen.blit(grid, position)
     clock.tick(60)
