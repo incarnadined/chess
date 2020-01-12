@@ -1,7 +1,8 @@
+from random import randint as rand
 from pygame.locals import *
 from models import *
+from minmax import *
 import pygame
-from random import randint as rand
 
 pygame.init()
 
@@ -13,6 +14,7 @@ lightpurple = (153, 165, 193)
 blue = (0,0,128)
 truepurple = (106,13,173)
 turquoise = (53,153,255)
+pink = (204, 0, 204)
 available_squares = []
 
 # Set up the drawing window
@@ -27,9 +29,14 @@ loc = False
 info = False
 promotion = False
 inforect = False
-movespeed = 10
-start = 0
 randavailable = False
+aislider = False
+aisliderx = 20
+holding = False
+computerlevel = 0
+restart = False
+pawn = 0
+capture = False
 # Pawn promotion selection
 prom = {}
 #random = pygame.Rect(75,125,50,33)
@@ -41,6 +48,7 @@ for i in board.array:
         if j != None:
             all_sprites.add(j)
 font = pygame.font.Font('freesansbold.ttf', 32)
+fontinfo = pygame.font.Font('freesansbold.ttf', 20)
 turn = Turn()
 captured = Taken()
 
@@ -49,18 +57,42 @@ running = True
 while running:
     if selected:
         #Check it is the turn of the moved piece
-        if selected.colour == turn.colour:
+        # Check an AI is not playing
+        if computerlevel == 0:
+            if selected.colour == turn.colour:
+                selected.coords = (pygame.mouse.get_pos()[0]-31.25,pygame.mouse.get_pos()[1]-31.25)
+                for square in selected.legalMoves(board):
+                    coords = locate(square)
+                    available_squares.append(pygame.Rect(coords[0]+(62.5*3/8),coords[1]+(62.5*3/8),15.5125,15.5125))
+            else:
+                selected = False
+        elif selected.colour == turn.colour and turn.colour == 'w':
             selected.coords = (pygame.mouse.get_pos()[0]-31.25,pygame.mouse.get_pos()[1]-31.25)
             for square in selected.legalMoves(board):
                 coords = locate(square)
                 available_squares.append(pygame.Rect(coords[0]+(62.5*3/8),coords[1]+(62.5*3/8),15.5125,15.5125))
         else:
             selected = False
+    '''if computerlevel != 0 and turn.colour == 'b':
+        print(computerlevel)
+        selected, aimove = airun(computerlevel, board)  
+        print(selected[0],aimove)
+        selected[0].move(aimove, board, check, captured, turn, capture)
+        if board.array[int(chessToMatrix(aimove)[0])][int(chessToMatrix(aimove)[1])] != selected:
+            selected, move = airun(computerlevel, board)
+            selected[0].move(aimove, board, check, captured, turn, capture)
+        selected = False'''
+
+    # Slider
+    if holding == True:
+        if pygame.mouse.get_pos()[0]-709 <= 170 and pygame.mouse.get_pos()[0]-709 >= 20:
+            aisliderx = pygame.mouse.get_pos()[0]-709
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
         if event.type == MOUSEBUTTONUP:
-            pass
+            if holding == True:
+                holding = False
         if event.type == MOUSEBUTTONDOWN and selected == False:
             for i in board.array:
                 for j in i:
@@ -70,104 +102,75 @@ while running:
                             posj = i.index(j)
                             posi = board.array.index(i)
                             #print(posj,posi)
-            for piece in prom:
-                if prom[piece].collidepoint(pygame.mouse.get_pos()[0],pygame.mouse.get_pos()[1]):
-                    if piece == 'queen':
-                        board.array[int(chessToMatrix(pawn.position)[0])][int(chessToMatrix(pawn.position)[1])] = Queen(pawn.colour, pawn.position)
-                    if piece == 'rook':
-                        board.array[int(chessToMatrix(pawn.position)[0])][int(chessToMatrix(pawn.position)[1])] = Rook(pawn.colour, pawn.position)
-                    if piece == 'bish':
-                        board.array[int(chessToMatrix(pawn.position)[0])][int(chessToMatrix(pawn.position)[1])] = Bishop(pawn.colour, pawn.position)
-                    if piece == 'knight':
-                        board.array[int(chessToMatrix(pawn.position)[0])][int(chessToMatrix(pawn.position)[1])] = Knight(pawn.colour, pawn.position)
-                    promotion = False
-                    pawn = False
+            if pawn:
+                for piece in prom:
+                    if prom[piece].collidepoint(pygame.mouse.get_pos()[0],pygame.mouse.get_pos()[1]):
+                        if piece == 'queen':
+                            board.array[int(chessToMatrix(pawn.position)[0])][int(chessToMatrix(pawn.position)[1])] = Queen(pawn.colour, pawn.position)
+                            check = checkCheck(board, pawn, 'uneeded param', check)
+                            if check['w'] == True:
+                                king = board.array[int(chessToMatrix(board.wk)[0])][int(chessToMatrix(board.wk)[1])]
+                                checkmate = checkMate(board, king, check)
+                                checkmatecolour = 'w'
+                            elif check['b'] == True:
+                                king = board.array[int(chessToMatrix(board.bk)[0])][int(chessToMatrix(board.bk)[1])]
+                                checkmate = checkMate(board, king, check)
+                                checkmatecolour = 'b'
+                            promotion = False
+                            pawn = False
+                        if piece == 'rook':
+                            board.array[int(chessToMatrix(pawn.position)[0])][int(chessToMatrix(pawn.position)[1])] = Rook(pawn.colour, pawn.position)
+                            check = checkCheck(board, pawn, 'uneeded param', check)
+                            if check['w'] == True:
+                                king = board.array[int(chessToMatrix(board.wk)[0])][int(chessToMatrix(board.wk)[1])]
+                                checkmate = checkMate(board, king, check)
+                                checkmatecolour = 'w'
+                            elif check['b'] == True:
+                                king = board.array[int(chessToMatrix(board.bk)[0])][int(chessToMatrix(board.bk)[1])]
+                                checkmate = checkMate(board, king, check)
+                                checkmatecolour = 'b'
+                            promotion = False
+                            pawn = False
+                        if piece == 'bish':
+                            board.array[int(chessToMatrix(pawn.position)[0])][int(chessToMatrix(pawn.position)[1])] = Bishop(pawn.colour, pawn.position)
+                            if check['w'] == True:
+                                king = board.array[int(chessToMatrix(board.wk)[0])][int(chessToMatrix(board.wk)[1])]
+                                checkmate = checkMate(board, king, check)
+                                checkmatecolour = 'w'
+                            elif check['b'] == True:
+                                king = board.array[int(chessToMatrix(board.bk)[0])][int(chessToMatrix(board.bk)[1])]
+                                checkmate = checkMate(board, king, check)
+                                checkmatecolour = 'b'
+                            check = checkCheck(board, pawn, 'uneeded param', check)
+                            promotion = False
+                            pawn = False
+                        if piece == 'knight':
+                            board.array[int(chessToMatrix(pawn.position)[0])][int(chessToMatrix(pawn.position)[1])] = Knight(pawn.colour, pawn.position)
+                            if check['w'] == True:
+                                king = board.array[int(chessToMatrix(board.wk)[0])][int(chessToMatrix(board.wk)[1])]
+                                checkmate = checkMate(board, king, check)
+                                checkmatecolour = 'w'
+                            elif check['b'] == True:
+                                king = board.array[int(chessToMatrix(board.bk)[0])][int(chessToMatrix(board.bk)[1])]
+                                checkmate = checkMate(board, king, check)
+                                checkmatecolour = 'b'
+                            check = checkCheck(board, pawn, 'uneeded param', check)
+                            promotion = False
+                            pawn = False
             if inforect.collidepoint(pygame.mouse.get_pos()[0],pygame.mouse.get_pos()[1]):
                 if info == True:
                     info = False
-                else:
+                elif info == False:
                     info = True
-                    start = 0
-            if randomslider.collidepoint(pygame.mouse.get_pos()[0],pygame.mouse.get_pos()[1]):
-                if info is True:
-                    if randavailable == True:
-                        randavailable = False
-                    else:
-                        randavailable = True
+            if aislider:
+                if aislider.collidepoint(pygame.mouse.get_pos()[0],pygame.mouse.get_pos()[1]):    
+                    holding = True
+            if restart:
+                if restart.collidepoint(pygame.mouse.get_pos()[0],pygame.mouse.get_pos()[1]):
+                    board.restart(turn, captured)
         elif event.type == MOUSEBUTTONDOWN:
-            board.updatefen(turn.colour)
-            origpos = selected.position
-            nomove, board = selected.move(coordToSquare(pygame.mouse.get_pos()),board)
-            matrixloc = chessToMatrix(selected.position)                    
-
-            if not nomove:
-                board.array[posi][posj] = None
-                #print(posi,posj)
-                newsquare = board.array[int(matrixloc[0])][int(matrixloc[1])]
-                if newsquare != None:
-                    capture = True
-                    captured.add(newsquare)
-                board.array[int(matrixloc[0])][int(matrixloc[1])] = selected
-                available_squares = []
-
-                #Finish turn
-                #check = checkCheck(board.fen)
-                check = checkCheck(board, selected, coordToSquare(pygame.mouse.get_pos()), check)
-                if check['w'] == True:
-                    print(board.wk,board.bk)
-                    king = board.array[int(chessToMatrix(board.wk)[0])][int(chessToMatrix(board.wk)[1])]
-                    checkmate = checkMate(board, king, check)
-                    checkmatecolour = 'w'
-                elif check['b'] == True:
-                    king = board.array[int(chessToMatrix(board.bk)[0])][int(chessToMatrix(board.bk)[1])]
-                    checkmate = checkMate(board, king, check)
-                    checkmatecolour = 'b'
-
-                if check[turn.colour] == True:
-                    if capture == True:
-                        board.array[int(matrixloc[0])][int(matrixloc[1])] = captured.array[-1]
-                        captured.remove()
-                    else:
-                        board.array[int(matrixloc[0])][int(matrixloc[1])] = None
-                    board.array[posi][posj] = selected
-                    selected.position = origpos
-                    selected.coords = locate(selected.position)
-                    selected.rect = pygame.Rect(selected.coords[0],selected.coords[1],63,63)
-                    selected.poshistory.pop(-1)
-                    if selected.symbol == 'K':
-                        if selected.colour == 'w':
-                            print(selected.position)
-                            board.wk = selected.position
-                        elif selected.colour == 'b':
-                            board.bk = selected.position
-                    check[turn.colour] = False
-                else:
-                    # Pawn promotion
-                    if selected.symbol == 'P':
-                        if chessToMatrix(selected.position)[0] == '0' or chessToMatrix(selected.position)[0] == '7':
-                            selected.matrix = chessToMatrix(selected.position)
-                            board.array[int(selected.matrix[0])][int(selected.matrix[1])] 
-                            promotion = pygame.Surface((400,100))
-                            promotion.fill(truepurple)
-                            pygame.draw.rect(promotion, lightpurple, pygame.Rect(10,10,80,80))
-                            pygame.draw.rect(promotion, lightpurple, pygame.Rect(110,10,80,80))
-                            pygame.draw.rect(promotion, lightpurple, pygame.Rect(210,10,80,80))
-                            pygame.draw.rect(promotion, lightpurple, pygame.Rect(310,10,80,80))
-                            prom['knight'] = pygame.Rect(110,260,80,80)
-                            prom['bish'] = pygame.Rect(210,260,80,80)
-                            prom['rook'] = pygame.Rect(310,260,80,80)
-                            prom['queen'] = pygame.Rect(410,260,80,80)
-                            promotion.blit(pygame.transform.scale(pygame.image.load('wikipedia/'+selected.colour+'N.png'),(80,80)),(10,10))
-                            promotion.blit(pygame.transform.scale(pygame.image.load('wikipedia/'+selected.colour+'B.png'),(80,80)),(110,10))
-                            promotion.blit(pygame.transform.scale(pygame.image.load('wikipedia/'+selected.colour+'R.png'),(80,80)),(210,10))
-                            promotion.blit(pygame.transform.scale(pygame.image.load('wikipedia/'+selected.colour+'Q.png'),(80,80)),(310,10))
-                            pawn = selected
-
-                    turn.completeTurn()
-                    matrixloc = None
-                    capture = False
-                    selected = False
-
+            nomove = selected.move(coordToSquare(pygame.mouse.get_pos()),board, check, captured, turn, capture)
+            
             if nomove:
                 #Snap piece back to square
                 selected.coords = locate(selected.position)
@@ -210,9 +213,9 @@ while running:
     sideBar = pygame.Surface((250,500))
     sideBar.fill(lightpurple)
 
-    text = turn.visual('w',font,blue,purple)
-    sideBar.blit(text, (75,25)) 
     text = turn.visual('b',font,blue,purple)
+    sideBar.blit(text, (75,25)) 
+    text = turn.visual('w',font,blue,purple)
     sideBar.blit(text, (75,450)) 
 
     x = 10
@@ -235,16 +238,16 @@ while running:
     pygame.draw.line(sideBar, purple, (0,250), (250,250),3)
 
     if checkmate == True:
-        if checkmatecolour == 'w':
+        if checkmatecolour == 'b':
             loc = (30,220)
             text = font.render('Checkmate!', True, truepurple)
-        if checkmatecolour == 'b':
+        if checkmatecolour == 'w':
             loc = (30,275)
             text = font.render('Checkmate!', True, truepurple)
-    elif check['w'] == True:
+    elif check['b'] == True:
         loc = (75,220)
         text = font.render('Check', True, truepurple)
-    elif check['b'] == True:
+    elif check['w'] == True:
         loc = (75,275)
         text = font.render('Check', True, truepurple)
     
@@ -262,34 +265,40 @@ while running:
     if promotion:
         screen.blit(promotion,(100,250))
 
-
-    infobar = pygame.Surface((875,550))
-    infobar.fill(turquoise)
-    random = pygame.draw.rect(infobar,(128,128,128),pygame.Rect(50,100,50,33))
-    if randavailable == True:
-        randomslider = pygame.draw.rect(infobar,(220,220,220),pygame.Rect(50,95,25,43))
-        randomslider = pygame.Rect(75,125,25,43)
-        text = font.render(' ON', True, (255,255,255), (0,255,0))
-        infobar.blit(text, (75,100))
-    if randavailable == False:
-        randomslider = pygame.draw.rect(infobar,(220,220,220),pygame.Rect(115,95,25,43))
-        randomslider = pygame.Rect(140,125,25,43)
-        text = font.render('OFF', True, (255,255,255), (0,0,255))
-        infobar.blit(text, (50,100))
-
+    # Create options menu on the right side
     if info == False:
+        aislider = False
+        restart = False
+
         infoarrow = pygame.Surface((25,50))
         infoarrow.fill(purple)
-        pygame.draw.ellipse(infoarrow,turquoise,pygame.Rect(0,0,50,50))
+        pygame.draw.ellipse(infoarrow,truepurple,pygame.Rect(0,0,50,50))
         pygame.draw.polygon(infoarrow,(255,255,255), ((5,25),(20,50//3),(20,(50//3)*2)))
         screen.blit(infoarrow,(875,100))
         inforect = pygame.Rect(875,100,25,50)
-    elif info == True:
-        if 900-start >= 25:
-            start+=movespeed
-            screen.blit(infobar, (900-start,25))
-        else:
-            screen.blit(infobar, (25,25))        
+    if info == True:
+        infobar = pygame.Surface((200,600))
+        infobar.fill(truepurple)
+
+        cross = pygame.transform.scale(pygame.image.load('x.png'), (40,40))
+        inforect = pygame.Rect(850,10,40,40)
+        infobar.blit(cross, (150, 10))
+
+        # Draw the slider to alter AI level, aisliderx has a range of 20-170 meaning a division of 40 gives us the values 0-4 inclusive (0 is off)
+        pygame.draw.rect(infobar, purple, pygame.Rect(20,85,160,3))
+        pygame.draw.ellipse(infobar, pink, pygame.Rect(aisliderx, 77, 19,19))
+        aislider = pygame.Rect(aisliderx+700,77,19,19)
+        
+        computerlevel = aisliderx//40
+        ai = fontinfo.render('Computer Level: '+str(computerlevel), True, purple)
+        infobar.blit(ai, (10,55))
+
+        pygame.draw.rect(infobar, pink, pygame.Rect(20, 540, 160, 40), 5)
+        restart = pygame.Rect(720, 540, 160, 40)
+        restartext = font.render('Restart', True, pink)
+        infobar.blit(restartext, (40,545))
+
+        screen.blit(infobar,(700,0))
 
 
     #screen.blit(grid, position)

@@ -117,7 +117,7 @@ def checkCheck(board, piece, mov, check):
 
     breaking = False
     kingloc = board.wk
-    for item in board.array :
+    for item in board.array:
         for ite in item:
             if breaking == False:
                 if ite is not None:
@@ -125,8 +125,8 @@ def checkCheck(board, piece, mov, check):
                         board.canCastle = {'wk': False, 'wq': False, 'bk': False, 'bq': False}
                         breaking = True
                         check['w'] = True
-                        check.whitehistory.append(copy.deepcopy(board.array))
                         check['wt'] = ite
+                        board.whitehistory.append(check['wt'])
                         break
                     else:
                         check['w'] = False
@@ -141,8 +141,8 @@ def checkCheck(board, piece, mov, check):
                         board.canCastle = {'wk': False, 'wq': False, 'bk': False, 'bq': False}
                         breaking = True
                         check['b'] = True
-                        check.blackhistory.append(copy.deepcopy(board.array))
                         check['bt'] = ite
+                        board.blackhistory.append(check['bt'])
                         break
                     else:
                         check['b'] = False
@@ -264,7 +264,7 @@ class King(pygame.sprite.Sprite):
         self.poshistory = []
         self.matrix = chessToMatrix(self.position)
 
-    def move(self,pos,board):
+    def move(self, pos, board, check, captured, turn, capture):
         if pos in self.legalMoves(board):
             try:
                 if pos == matrixToChess(int(self.matrix)+2):
@@ -272,12 +272,12 @@ class King(pygame.sprite.Sprite):
                         rook = board.array[int(chessToMatrix('h1')[0])][int(chessToMatrix('h1')[1])]
                         board.array[int(chessToMatrix('h1')[0])][int(chessToMatrix('h1')[1])] = None
                         rook.move('f1',board)
-                        board.array[int(chessToMatrix('f1')[0])][int(chessToMatrix('f1')[1])] = rook
+                        #board.array[int(chessToMatrix('f1')[0])][int(chessToMatrix('f1')[1])] = rook
                     if self.colour == 'b' and len(board.blackhistory) == 0:
                         rook = board.array[int(chessToMatrix('h8')[0])][int(chessToMatrix('h8')[1])]
                         board.array[int(chessToMatrix('h8')[0])][int(chessToMatrix('h8')[1])] = None
                         rook.move('f8',board)
-                        board.array[int(chessToMatrix('f8')[0])][int(chessToMatrix('f8')[1])] = rook
+                        #board.array[int(chessToMatrix('f8')[0])][int(chessToMatrix('f8')[1])] = rook
 
                 if pos == matrixToChess(int(self.matrix)-2):
                     if self.colour == 'w':
@@ -293,7 +293,6 @@ class King(pygame.sprite.Sprite):
             except:
                 pass
             board.canCastle[self.colour+'k'] = False
-            board.canCastle[self.colour+'k'] = False
             self.poshistory.append(self.position)
             self.position = pos
             self.coords = locate(self.position)
@@ -303,11 +302,81 @@ class King(pygame.sprite.Sprite):
             elif self.colour == 'b':
                 board.bk = self.position
             if self.poshistory[-1] == self.position:
-                return True, board
+                nomove = True
             else:
-                return False, board
+                nomove = False
         else:
-            return True, board
+            nomove = True
+
+        board.updatefen(turn.colour)
+        origpos = self.position
+        self.matrix = chessToMatrix(self.position)                    
+
+        if not nomove:
+            board.array[int(chessToMatrix(self.poshistory[-1])[0])][int(chessToMatrix(self.poshistory[-1])[1])] = None
+            #print(posi,posj)
+            newsquare = board.array[int(self.matrix[0])][int(self.matrix[1])]
+            if newsquare != None:
+                capture = True
+                captured.add(newsquare)
+            board.array[int(self.matrix[0])][int(self.matrix[1])] = self
+            available_squares = []
+
+            #Finish turn
+            #check = checkCheck(board.fen)
+            check = checkCheck(board, self, pos, check)
+            if check['w'] == True:
+                king = board.array[int(chessToMatrix(board.wk)[0])][int(chessToMatrix(board.wk)[1])]
+                checkmate = checkMate(board, king, check)
+                checkmatecolour = 'w'
+            elif check['b'] == True:
+                king = board.array[int(chessToMatrix(board.bk)[0])][int(chessToMatrix(board.bk)[1])]
+                checkmate = checkMate(board, king, check)
+                checkmatecolour = 'b'
+
+            if check[turn.colour] == True:
+                if capture == True:
+                    board.array[int(self.matrix[0])][int(self.matrix[1])] = captured.array[-1]
+                    captured.remove()
+                else:
+                    board.array[int(self.matrix[0])][int(self.matrix[1])] = None
+                board.array[int(chessToMatrix(self.poshistory[-1])[0])][int(chessToMatrix(self.poshistory[-1])[1])] = self
+                self.position = origpos
+                self.coords = locate(self.position)
+                self.rect = pygame.Rect(self.coords[0],self.coords[1],63,63)
+                self.poshistory.pop(-1)
+                if self.symbol == 'K':
+                    if self.colour == 'w':
+                        board.wk = self.position
+                    elif self.colour == 'b':
+                        board.bk = self.position
+                check[turn.colour] = False
+            else:
+                # Pawn promotion
+                if self.symbol == 'P':
+                    if chessToMatrix(self.position)[0] == '0' or chessToMatrix(self.position)[0] == '7':
+                        self.matrix = chessToMatrix(self.position)
+                        board.array[int(self.matrix[0])][int(self.matrix[1])] 
+                        promotion = pygame.Surface((400,100))
+                        promotion.fill((106,13,173))
+                        pygame.draw.rect(promotion, (153, 165, 193) , pygame.Rect(10,10,80,80))
+                        pygame.draw.rect(promotion, (153, 165, 193) , pygame.Rect(110,10,80,80))
+                        pygame.draw.rect(promotion, (153, 165, 193) , pygame.Rect(210,10,80,80))
+                        pygame.draw.rect(promotion, (153, 165, 193) , pygame.Rect(310,10,80,80))
+                        prom['knight'] = pygame.Rect(110,260,80,80)
+                        prom['bish'] = pygame.Rect(210,260,80,80)
+                        prom['rook'] = pygame.Rect(310,260,80,80)
+                        prom['queen'] = pygame.Rect(410,260,80,80)
+                        promotion.blit(pygame.transform.scale(pygame.image.load('wikipedia/'+self.colour+'N.png'),(80,80)),(10,10))
+                        promotion.blit(pygame.transform.scale(pygame.image.load('wikipedia/'+self.colour+'B.png'),(80,80)),(110,10))
+                        promotion.blit(pygame.transform.scale(pygame.image.load('wikipedia/'+self.colour+'R.png'),(80,80)),(210,10))
+                        promotion.blit(pygame.transform.scale(pygame.image.load('wikipedia/'+self.colour+'Q.png'),(80,80)),(310,10))
+                        pawn = self
+
+                turn.completeTurn()
+                capture = False
+                self = False
+        return nomove, check
     
     def legalMoves(self,board):
         self.temp = []
@@ -335,7 +404,6 @@ class King(pygame.sprite.Sprite):
                 elif self.colour == 'b':
                     rook = board.array[int(chessToMatrix('h8')[0])][int(chessToMatrix('h8')[1])]
                 if matrixToChess(int(self.matrix)+1) in rook.legalMoves(board):
-                    print('no')
                     self.temp.append(matrixToChess(int(self.matrix)+2))
             
             # O-O-O 
@@ -345,7 +413,6 @@ class King(pygame.sprite.Sprite):
                 elif self.colour == 'b':
                     rook = board.array[int(chessToMatrix('a8')[0])][int(chessToMatrix('a8')[1])]
                 if matrixToChess(int(self.matrix)-1) in rook.legalMoves(board):
-                    print('no u')
                     self.temp.append(matrixToChess(int(self.matrix)-2))
         except:
             pass
@@ -397,7 +464,7 @@ class Rook(pygame.sprite.Sprite):
         self.poshistory = []
         self.matrix = chessToMatrix(self.position)
 
-    def move(self,pos,board):
+    def move(self, pos, board, check, captured, turn, capture):
         if pos in self.legalMoves(board):
             if self.position == 'h1':
                 board.canCastle['wk'] = False
@@ -412,11 +479,81 @@ class Rook(pygame.sprite.Sprite):
             self.coords = locate(self.position)
             self.rect = pygame.Rect(self.coords[0],self.coords[1],63,63)
             if self.poshistory[-1] == self.position:
-                return True, board
+                nomove = True
             else:
-                return False, board
+                nomove = False
         else:
-            return True, board
+            nomove = True
+
+        board.updatefen(turn.colour)
+        origpos = self.position
+        self.matrix = chessToMatrix(self.position)                    
+
+        if not nomove:
+            board.array[int(chessToMatrix(self.poshistory[-1])[0])][int(chessToMatrix(self.poshistory[-1])[1])] = None
+            #print(posi,posj)
+            newsquare = board.array[int(self.matrix[0])][int(self.matrix[1])]
+            if newsquare != None:
+                capture = True
+                captured.add(newsquare)
+            board.array[int(self.matrix[0])][int(self.matrix[1])] = self
+            available_squares = []
+
+            #Finish turn
+            #check = checkCheck(board.fen)
+            check = checkCheck(board, self, pos, check)
+            if check['w'] == True:
+                king = board.array[int(chessToMatrix(board.wk)[0])][int(chessToMatrix(board.wk)[1])]
+                checkmate = checkMate(board, king, check)
+                checkmatecolour = 'w'
+            elif check['b'] == True:
+                king = board.array[int(chessToMatrix(board.bk)[0])][int(chessToMatrix(board.bk)[1])]
+                checkmate = checkMate(board, king, check)
+                checkmatecolour = 'b'
+
+            if check[turn.colour] == True:
+                if capture == True:
+                    board.array[int(self.matrix[0])][int(self.matrix[1])] = captured.array[-1]
+                    captured.remove()
+                else:
+                    board.array[int(self.matrix[0])][int(self.matrix[1])] = None
+                board.array[int(chessToMatrix(self.poshistory[-1])[0])][int(chessToMatrix(self.poshistory[-1])[1])] = self
+                self.position = origpos
+                self.coords = locate(self.position)
+                self.rect = pygame.Rect(self.coords[0],self.coords[1],63,63)
+                self.poshistory.pop(-1)
+                if self.symbol == 'K':
+                    if self.colour == 'w':
+                        board.wk = self.position
+                    elif self.colour == 'b':
+                        board.bk = self.position
+                check[turn.colour] = False
+            else:
+                # Pawn promotion
+                if self.symbol == 'P':
+                    if chessToMatrix(self.position)[0] == '0' or chessToMatrix(self.position)[0] == '7':
+                        self.matrix = chessToMatrix(self.position)
+                        board.array[int(self.matrix[0])][int(self.matrix[1])] 
+                        promotion = pygame.Surface((400,100))
+                        promotion.fill((106,13,173))
+                        pygame.draw.rect(promotion, (153, 165, 193) , pygame.Rect(10,10,80,80))
+                        pygame.draw.rect(promotion, (153, 165, 193) , pygame.Rect(110,10,80,80))
+                        pygame.draw.rect(promotion, (153, 165, 193) , pygame.Rect(210,10,80,80))
+                        pygame.draw.rect(promotion, (153, 165, 193) , pygame.Rect(310,10,80,80))
+                        prom['knight'] = pygame.Rect(110,260,80,80)
+                        prom['bish'] = pygame.Rect(210,260,80,80)
+                        prom['rook'] = pygame.Rect(310,260,80,80)
+                        prom['queen'] = pygame.Rect(410,260,80,80)
+                        promotion.blit(pygame.transform.scale(pygame.image.load('wikipedia/'+self.colour+'N.png'),(80,80)),(10,10))
+                        promotion.blit(pygame.transform.scale(pygame.image.load('wikipedia/'+self.colour+'B.png'),(80,80)),(110,10))
+                        promotion.blit(pygame.transform.scale(pygame.image.load('wikipedia/'+self.colour+'R.png'),(80,80)),(210,10))
+                        promotion.blit(pygame.transform.scale(pygame.image.load('wikipedia/'+self.colour+'Q.png'),(80,80)),(310,10))
+                        pawn = self
+
+                turn.completeTurn()
+                capture = False
+                self = False
+        return nomove, check
 
     def legalMoves(self,board):
         self.temp = []
@@ -518,18 +655,88 @@ class Knight(pygame.sprite.Sprite):
         self.poshistory = []
         self.matrix = chessToMatrix(self.position)
 
-    def move(self,pos,board):
+    def move(self, pos, board, check, captured, turn, capture):
         if pos in self.legalMoves(board):
             self.poshistory.append(self.position)
             self.position = pos
             self.coords = locate(self.position)
             self.rect = pygame.Rect(self.coords[0],self.coords[1],63,63)
             if self.poshistory[-1] == self.position:
-                return True, board
+                nomove = True
             else:
-                return False, board
+                nomove = False
         else:
-            return True, board
+            nomove = True
+
+        board.updatefen(turn.colour)
+        origpos = self.position
+        self.matrix = chessToMatrix(self.position)                    
+
+        if not nomove:
+            board.array[int(chessToMatrix(self.poshistory[-1])[0])][int(chessToMatrix(self.poshistory[-1])[1])] = None
+            #print(posi,posj)
+            newsquare = board.array[int(self.matrix[0])][int(self.matrix[1])]
+            if newsquare != None:
+                capture = True
+                captured.add(newsquare)
+            board.array[int(self.matrix[0])][int(self.matrix[1])] = self
+            available_squares = []
+
+            #Finish turn
+            #check = checkCheck(board.fen)
+            check = checkCheck(board, self, pos, check)
+            if check['w'] == True:
+                king = board.array[int(chessToMatrix(board.wk)[0])][int(chessToMatrix(board.wk)[1])]
+                checkmate = checkMate(board, king, check)
+                checkmatecolour = 'w'
+            elif check['b'] == True:
+                king = board.array[int(chessToMatrix(board.bk)[0])][int(chessToMatrix(board.bk)[1])]
+                checkmate = checkMate(board, king, check)
+                checkmatecolour = 'b'
+
+            if check[turn.colour] == True:
+                if capture == True:
+                    board.array[int(self.matrix[0])][int(self.matrix[1])] = captured.array[-1]
+                    captured.remove()
+                else:
+                    board.array[int(self.matrix[0])][int(self.matrix[1])] = None
+                board.array[int(chessToMatrix(self.poshistory[-1])[0])][int(chessToMatrix(self.poshistory[-1])[1])] = self
+                self.position = origpos
+                self.coords = locate(self.position)
+                self.rect = pygame.Rect(self.coords[0],self.coords[1],63,63)
+                self.poshistory.pop(-1)
+                if self.symbol == 'K':
+                    if self.colour == 'w':
+                        board.wk = self.position
+                    elif self.colour == 'b':
+                        board.bk = self.position
+                check[turn.colour] = False
+            else:
+                # Pawn promotion
+                if self.symbol == 'P':
+                    if chessToMatrix(self.position)[0] == '0' or chessToMatrix(self.position)[0] == '7':
+                        self.matrix = chessToMatrix(self.position)
+                        board.array[int(self.matrix[0])][int(self.matrix[1])] 
+                        promotion = pygame.Surface((400,100))
+                        promotion.fill((106,13,173))
+                        pygame.draw.rect(promotion, (153, 165, 193) , pygame.Rect(10,10,80,80))
+                        pygame.draw.rect(promotion, (153, 165, 193) , pygame.Rect(110,10,80,80))
+                        pygame.draw.rect(promotion, (153, 165, 193) , pygame.Rect(210,10,80,80))
+                        pygame.draw.rect(promotion, (153, 165, 193) , pygame.Rect(310,10,80,80))
+                        prom['knight'] = pygame.Rect(110,260,80,80)
+                        prom['bish'] = pygame.Rect(210,260,80,80)
+                        prom['rook'] = pygame.Rect(310,260,80,80)
+                        prom['queen'] = pygame.Rect(410,260,80,80)
+                        promotion.blit(pygame.transform.scale(pygame.image.load('wikipedia/'+self.colour+'N.png'),(80,80)),(10,10))
+                        promotion.blit(pygame.transform.scale(pygame.image.load('wikipedia/'+self.colour+'B.png'),(80,80)),(110,10))
+                        promotion.blit(pygame.transform.scale(pygame.image.load('wikipedia/'+self.colour+'R.png'),(80,80)),(210,10))
+                        promotion.blit(pygame.transform.scale(pygame.image.load('wikipedia/'+self.colour+'Q.png'),(80,80)),(310,10))
+                        pawn = self
+
+                turn.completeTurn()
+                capture = False
+                self = False
+        return nomove, check
 
     def legalMoves(self,board):
         self.temp = []
@@ -596,18 +803,88 @@ class Bishop(pygame.sprite.Sprite):
         self.poshistory = []
         self.matrix = chessToMatrix(self.position)
 
-    def move(self, pos, board):
+    def move(self, pos, board, check, captured, turn, capture):
         if pos in self.legalMoves(board):
             self.poshistory.append(self.position)
             self.position = pos
             self.coords = locate(self.position)
             self.rect = pygame.Rect(self.coords[0], self.coords[1], 63, 63)
             if self.poshistory[-1] == self.position:
-                return True, board
+                nomove = True
             else:
-                return False, board
+                nomove = False
         else:
-            return True, board
+            nomove = True
+
+        board.updatefen(turn.colour)
+        origpos = self.position
+        self.matrix = chessToMatrix(self.position)                    
+
+        if not nomove:
+            board.array[int(chessToMatrix(self.poshistory[-1])[0])][int(chessToMatrix(self.poshistory[-1])[1])] = None
+            #print(posi,posj)
+            newsquare = board.array[int(self.matrix[0])][int(self.matrix[1])]
+            if newsquare != None:
+                capture = True
+                captured.add(newsquare)
+            board.array[int(self.matrix[0])][int(self.matrix[1])] = self
+            available_squares = []
+
+            #Finish turn
+            #check = checkCheck(board.fen)
+            check = checkCheck(board, self, pos, check)
+            if check['w'] == True:
+                king = board.array[int(chessToMatrix(board.wk)[0])][int(chessToMatrix(board.wk)[1])]
+                checkmate = checkMate(board, king, check)
+                checkmatecolour = 'w'
+            elif check['b'] == True:
+                king = board.array[int(chessToMatrix(board.bk)[0])][int(chessToMatrix(board.bk)[1])]
+                checkmate = checkMate(board, king, check)
+                checkmatecolour = 'b'
+
+            if check[turn.colour] == True:
+                if capture == True:
+                    board.array[int(self.matrix[0])][int(self.matrix[1])] = captured.array[-1]
+                    captured.remove()
+                else:
+                    board.array[int(self.matrix[0])][int(self.matrix[1])] = None
+                board.array[int(chessToMatrix(self.poshistory[-1])[0])][int(chessToMatrix(self.poshistory[-1])[1])] = self
+                self.position = origpos
+                self.coords = locate(self.position)
+                self.rect = pygame.Rect(self.coords[0],self.coords[1],63,63)
+                self.poshistory.pop(-1)
+                if self.symbol == 'K':
+                    if self.colour == 'w':
+                        board.wk = self.position
+                    elif self.colour == 'b':
+                        board.bk = self.position
+                check[turn.colour] = False
+            else:
+                # Pawn promotion
+                if self.symbol == 'P':
+                    if chessToMatrix(self.position)[0] == '0' or chessToMatrix(self.position)[0] == '7':
+                        self.matrix = chessToMatrix(self.position)
+                        board.array[int(self.matrix[0])][int(self.matrix[1])] 
+                        promotion = pygame.Surface((400,100))
+                        promotion.fill((106,13,173))
+                        pygame.draw.rect(promotion, (153, 165, 193) , pygame.Rect(10,10,80,80))
+                        pygame.draw.rect(promotion, (153, 165, 193) , pygame.Rect(110,10,80,80))
+                        pygame.draw.rect(promotion, (153, 165, 193) , pygame.Rect(210,10,80,80))
+                        pygame.draw.rect(promotion, (153, 165, 193) , pygame.Rect(310,10,80,80))
+                        prom['knight'] = pygame.Rect(110,260,80,80)
+                        prom['bish'] = pygame.Rect(210,260,80,80)
+                        prom['rook'] = pygame.Rect(310,260,80,80)
+                        prom['queen'] = pygame.Rect(410,260,80,80)
+                        promotion.blit(pygame.transform.scale(pygame.image.load('wikipedia/'+self.colour+'N.png'),(80,80)),(10,10))
+                        promotion.blit(pygame.transform.scale(pygame.image.load('wikipedia/'+self.colour+'B.png'),(80,80)),(110,10))
+                        promotion.blit(pygame.transform.scale(pygame.image.load('wikipedia/'+self.colour+'R.png'),(80,80)),(210,10))
+                        promotion.blit(pygame.transform.scale(pygame.image.load('wikipedia/'+self.colour+'Q.png'),(80,80)),(310,10))
+                        pawn = self
+
+                turn.completeTurn()
+                capture = False
+                self = False
+        return nomove, check
 
     def legalMoves(self, board):
         self.temp = []
@@ -737,18 +1014,88 @@ class Queen(pygame.sprite.Sprite):
         self.poshistory = []
         self.matrix = chessToMatrix(self.position)
 
-    def move(self,pos,board):
+    def move(self, pos, board, check, captured, turn, capture):
         if pos in self.legalMoves(board):
             self.poshistory.append(self.position)
             self.position = pos
             self.coords = locate(self.position)
             self.rect = pygame.Rect(self.coords[0],self.coords[1],63,63)
             if self.poshistory[-1] == self.position:
-                return True, board
+                nomove = True
             else:
-                return False, board
+                nomove = False
         else:
-            return True, board
+            nomove = True
+
+        board.updatefen(turn.colour)
+        origpos = self.position
+        self.matrix = chessToMatrix(self.position)                    
+
+        if not nomove:
+            board.array[int(chessToMatrix(self.poshistory[-1])[0])][int(chessToMatrix(self.poshistory[-1])[1])] = None
+            #print(posi,posj)
+            newsquare = board.array[int(self.matrix[0])][int(self.matrix[1])]
+            if newsquare != None:
+                capture = True
+                captured.add(newsquare)
+            board.array[int(self.matrix[0])][int(self.matrix[1])] = self
+            available_squares = []
+
+            #Finish turn
+            #check = checkCheck(board.fen)
+            check = checkCheck(board, self, pos, check)
+            if check['w'] == True:
+                king = board.array[int(chessToMatrix(board.wk)[0])][int(chessToMatrix(board.wk)[1])]
+                checkmate = checkMate(board, king, check)
+                checkmatecolour = 'w'
+            elif check['b'] == True:
+                king = board.array[int(chessToMatrix(board.bk)[0])][int(chessToMatrix(board.bk)[1])]
+                checkmate = checkMate(board, king, check)
+                checkmatecolour = 'b'
+
+            if check[turn.colour] == True:
+                if capture == True:
+                    board.array[int(self.matrix[0])][int(self.matrix[1])] = captured.array[-1]
+                    captured.remove()
+                else:
+                    board.array[int(self.matrix[0])][int(self.matrix[1])] = None
+                board.array[int(chessToMatrix(self.poshistory[-1])[0])][int(chessToMatrix(self.poshistory[-1])[1])] = self
+                self.position = origpos
+                self.coords = locate(self.position)
+                self.rect = pygame.Rect(self.coords[0],self.coords[1],63,63)
+                self.poshistory.pop(-1)
+                if self.symbol == 'K':
+                    if self.colour == 'w':
+                        board.wk = self.position
+                    elif self.colour == 'b':
+                        board.bk = self.position
+                check[turn.colour] = False
+            else:
+                # Pawn promotion
+                if self.symbol == 'P':
+                    if chessToMatrix(self.position)[0] == '0' or chessToMatrix(self.position)[0] == '7':
+                        self.matrix = chessToMatrix(self.position)
+                        board.array[int(self.matrix[0])][int(self.matrix[1])] 
+                        promotion = pygame.Surface((400,100))
+                        promotion.fill((106,13,173))
+                        pygame.draw.rect(promotion, (153, 165, 193) , pygame.Rect(10,10,80,80))
+                        pygame.draw.rect(promotion, (153, 165, 193) , pygame.Rect(110,10,80,80))
+                        pygame.draw.rect(promotion, (153, 165, 193) , pygame.Rect(210,10,80,80))
+                        pygame.draw.rect(promotion, (153, 165, 193) , pygame.Rect(310,10,80,80))
+                        prom['knight'] = pygame.Rect(110,260,80,80)
+                        prom['bish'] = pygame.Rect(210,260,80,80)
+                        prom['rook'] = pygame.Rect(310,260,80,80)
+                        prom['queen'] = pygame.Rect(410,260,80,80)
+                        promotion.blit(pygame.transform.scale(pygame.image.load('wikipedia/'+self.colour+'N.png'),(80,80)),(10,10))
+                        promotion.blit(pygame.transform.scale(pygame.image.load('wikipedia/'+self.colour+'B.png'),(80,80)),(110,10))
+                        promotion.blit(pygame.transform.scale(pygame.image.load('wikipedia/'+self.colour+'R.png'),(80,80)),(210,10))
+                        promotion.blit(pygame.transform.scale(pygame.image.load('wikipedia/'+self.colour+'Q.png'),(80,80)),(310,10))
+                        pawn = self
+
+                turn.completeTurn()
+                capture = False
+                self = False
+        return nomove, check
 
     def legalMoves(self,board):
         self.temp = []
@@ -921,7 +1268,7 @@ class Pawn(pygame.sprite.Sprite):
         self.poshistory = []
         self.matrix = chessToMatrix(self.position)
 
-    def move(self,pos,board):
+    def move(self, pos, board, check, captured, turn, capture):
         #print('pos',pos)
         #print(self.legalMoves(board))
         if pos in self.legalMoves(board):
@@ -931,11 +1278,81 @@ class Pawn(pygame.sprite.Sprite):
             self.rect = pygame.Rect(self.coords[0],self.coords[1],63,63)
 
             if self.poshistory[-1] == self.position:
-                return True, board
+                nomove = True
             else:
-                return False, board
+                nomove = False
         else:
-            return True, board
+            nomove = True
+
+        board.updatefen(turn.colour)
+        origpos = self.position
+        self.matrix = chessToMatrix(self.position)                    
+
+        if not nomove:
+            board.array[int(chessToMatrix(self.poshistory[-1])[0])][int(chessToMatrix(self.poshistory[-1])[1])] = None
+            #print(posi,posj)
+            newsquare = board.array[int(self.matrix[0])][int(self.matrix[1])]
+            if newsquare != None:
+                capture = True
+                captured.add(newsquare)
+            board.array[int(self.matrix[0])][int(self.matrix[1])] = self
+            available_squares = []
+
+            #Finish turn
+            #check = checkCheck(board.fen)
+            check = checkCheck(board, self, pos, check)
+            if check['w'] == True:
+                king = board.array[int(chessToMatrix(board.wk)[0])][int(chessToMatrix(board.wk)[1])]
+                checkmate = checkMate(board, king, check)
+                checkmatecolour = 'w'
+            elif check['b'] == True:
+                king = board.array[int(chessToMatrix(board.bk)[0])][int(chessToMatrix(board.bk)[1])]
+                checkmate = checkMate(board, king, check)
+                checkmatecolour = 'b'
+
+            if check[turn.colour] == True:
+                if capture == True:
+                    board.array[int(self.matrix[0])][int(self.matrix[1])] = captured.array[-1]
+                    captured.remove()
+                else:
+                    board.array[int(self.matrix[0])][int(self.matrix[1])] = None
+                board.array[int(chessToMatrix(self.poshistory[-1])[0])][int(chessToMatrix(self.poshistory[-1])[1])] = self
+                self.position = origpos
+                self.coords = locate(self.position)
+                self.rect = pygame.Rect(self.coords[0],self.coords[1],63,63)
+                self.poshistory.pop(-1)
+                if self.symbol == 'K':
+                    if self.colour == 'w':
+                        board.wk = self.position
+                    elif self.colour == 'b':
+                        board.bk = self.position
+                check[turn.colour] = False
+            else:
+                # Pawn promotion
+                if self.symbol == 'P':
+                    if chessToMatrix(self.position)[0] == '0' or chessToMatrix(self.position)[0] == '7':
+                        self.matrix = chessToMatrix(self.position)
+                        board.array[int(self.matrix[0])][int(self.matrix[1])] 
+                        promotion = pygame.Surface((400,100))
+                        promotion.fill((106,13,173))
+                        pygame.draw.rect(promotion, (153, 165, 193) , pygame.Rect(10,10,80,80))
+                        pygame.draw.rect(promotion, (153, 165, 193) , pygame.Rect(110,10,80,80))
+                        pygame.draw.rect(promotion, (153, 165, 193) , pygame.Rect(210,10,80,80))
+                        pygame.draw.rect(promotion, (153, 165, 193) , pygame.Rect(310,10,80,80))
+                        prom['knight'] = pygame.Rect(110,260,80,80)
+                        prom['bish'] = pygame.Rect(210,260,80,80)
+                        prom['rook'] = pygame.Rect(310,260,80,80)
+                        prom['queen'] = pygame.Rect(410,260,80,80)
+                        promotion.blit(pygame.transform.scale(pygame.image.load('wikipedia/'+self.colour+'N.png'),(80,80)),(10,10))
+                        promotion.blit(pygame.transform.scale(pygame.image.load('wikipedia/'+self.colour+'B.png'),(80,80)),(110,10))
+                        promotion.blit(pygame.transform.scale(pygame.image.load('wikipedia/'+self.colour+'R.png'),(80,80)),(210,10))
+                        promotion.blit(pygame.transform.scale(pygame.image.load('wikipedia/'+self.colour+'Q.png'),(80,80)),(310,10))
+                        pawn = self
+
+                turn.completeTurn()
+                capture = False
+                self = False
+        return nomove, check
 
     def legalMoves(self,board):
         self.temp = []
@@ -1113,6 +1530,22 @@ class Board():
         # No fullmove counter so set to 1
         self.fen+= ' 1'
     
+    def restart(self, turn, captured):
+        self.array = [
+            [Rook('b', 'a8'),Knight('b','b8'),Bishop('b','c8'),Queen('b','d8'),King('b','e8'),Bishop('b','f8'),Knight('b','g8'),Rook('b','h8')],
+            [Pawn('b', 'a7'),Pawn('b','b7'),Pawn('b','c7'),Pawn('b','d7'),Pawn('b','e7'),Pawn('b','f7'),Pawn('b','g7'),Pawn('b','h7')],
+            [None for x in range(8)],
+            [None for x in range(8)],
+            [None for x in range(8)],
+            [None for x in range(8)],
+            [Pawn('w','a2'),Pawn('w','b2'),Pawn('w','c2'),Pawn('w','d2'),Pawn('w','e2'),Pawn('w','f2'),Pawn('w','g2'),Pawn('w','h2')],
+            [Rook('w','a1'),Knight('w','b1'),Bishop('w','c1'),Queen('w','d1'),King('w','e1'),Bishop('w','f1'),Knight('w','g1'),Rook('w','h1')]
+        ]
+        captured.array = []
+        captured.sort()
+
+        turn.colour = 'w'
+
     def __repr__(self):
         msg = ''
         for i in self.array:
