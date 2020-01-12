@@ -3,6 +3,8 @@ import math
 selected = False
 availablesquares = []
 images = {}
+promotion = False
+prom = {}
 
 
 def number(letter):

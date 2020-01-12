@@ -259,7 +259,8 @@ class Pawn(Piece):
         }
         if self.position[1] != '8' and self.position[1] != '1':
             if self.colour == 'w':
-                self.paths['n'].append(chess(expand(int(matrix(self.position))-10)))
+                if board.array[int(str(expand(int(matrix(self.position))-10))[0])][int(str(expand(int(matrix(self.position))-10))[1])] is None:
+                    self.paths['n'].append(chess(expand(int(matrix(self.position))-10)))
                 if len(self.poshistory) == 0:
                     self.paths['n'].append(chess(expand(int(matrix(self.position))-20)))
                 if board.array[int(str(expand(int(matrix(self.position))-11))[0])][int(str(expand(int(matrix(self.position))-11))[1])] is not None:
@@ -267,7 +268,8 @@ class Pawn(Piece):
                 if board.array[int(str(expand(int(matrix(self.position))-9))[0])][int(str(expand(int(matrix(self.position))-9))[1])] is not None:
                     self.paths['nw'].append(chess(expand(int(matrix(self.position))-9)))
             elif self.colour == 'b':
-                self.paths['s'].append(chess(int(matrix(self.position))+10))
+                if board.array[int(str(expand(int(matrix(self.position))+10))[0])][int(str(expand(int(matrix(self.position))+10))[1])] is None:
+                    self.paths['s'].append(chess(int(matrix(self.position))+10))
                 if len(self.poshistory) == 0:
                     self.paths['s'].append(chess(int(matrix(self.position))+20))
                 if board.array[int(str(int(matrix(self.position))+11)[0])][int(str(int(matrix(self.position))+11)[1])] is not None:

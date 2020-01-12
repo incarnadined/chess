@@ -34,12 +34,27 @@ while running:
                             for place in selected.legalMoves(game.board):
                                 coords = locate(place)
                                 availablesquares.append(pygame.Rect(coords[0]+(62.5*3/8),coords[1]+(62.5*3/8),15.5125,15.5125))
+            for piece in prom:
+                if prom[piece].collidepoint(pygame.mouse.get_pos()[0],pygame.mouse.get_pos()[1]):
+                    if piece == 'knight':
+                        game.board.array[int(matrix(pawn.position)[0])][int(matrix(pawn.position)[1])] = Knight(pawn.position,pawn.colour)
+                    elif piece == 'bish':
+                        game.board.array[int(matrix(pawn.position)[0])][int(matrix(pawn.position)[1])] = Bishop(pawn.position,pawn.colour)
+                    elif piece == 'rook':
+                        game.board.array[int(matrix(pawn.position)[0])][int(matrix(pawn.position)[1])] = Rook(pawn.position,pawn.colour)
+                    elif piece == 'queen':
+                        game.board.array[int(matrix(pawn.position)[0])][int(matrix(pawn.position)[1])] = Queen(pawn.position,pawn.colour)
+                    promotion = False
+                    pawn = False
         elif event.type == MOUSEBUTTONDOWN:
             coords = pygame.mouse.get_pos()
             legal = game.board.move(selected,square(coords),game.captured)
             if legal is False:
                 # Snap piece back to it's square if it was an illegal move
                 selected.coords = locate(selected.position)
+            if selected.symbol == 'P' and (selected.position[1] == '8' or selected.position[1] == '1'):
+                promotion = pygame.Surface((400,100))
+                pawn = selected
             selected = False
             availablesquares = []
 
@@ -78,6 +93,23 @@ while running:
     # Draw the selceted piece last so it shows above everything else
     if selected:
         screen.blit(images[selected.colour+selected.symbol], selected.coords)
+
+    # Draw the menu to select pieces
+    if promotion:
+        promotion.fill((106,13,173))
+        pygame.draw.rect(promotion, (153, 165, 193) , pygame.Rect(10,10,80,80))
+        pygame.draw.rect(promotion, (153, 165, 193) , pygame.Rect(110,10,80,80))
+        pygame.draw.rect(promotion, (153, 165, 193) , pygame.Rect(210,10,80,80))
+        pygame.draw.rect(promotion, (153, 165, 193) , pygame.Rect(310,10,80,80))
+        prom['knight'] = pygame.Rect(110,260,80,80)
+        prom['bish'] = pygame.Rect(210,260,80,80)
+        prom['rook'] = pygame.Rect(310,260,80,80)
+        prom['queen'] = pygame.Rect(410,260,80,80)
+        promotion.blit(pygame.transform.scale(pygame.image.load('../wikipedia/'+pawn.colour+'N.png'),(80,80)),(10,10))
+        promotion.blit(pygame.transform.scale(pygame.image.load('../wikipedia/'+pawn.colour+'B.png'),(80,80)),(110,10))
+        promotion.blit(pygame.transform.scale(pygame.image.load('../wikipedia/'+pawn.colour+'R.png'),(80,80)),(210,10))
+        promotion.blit(pygame.transform.scale(pygame.image.load('../wikipedia/'+pawn.colour+'Q.png'),(80,80)),(310,10))
+        screen.blit(promotion, (100,250))
 
     clock.tick(60)
     pygame.display.update()
