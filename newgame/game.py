@@ -30,10 +30,11 @@ while running:
                 for piece in rank:
                     if piece is not None:
                         if piece.rect.collidepoint(pygame.mouse.get_pos()[0], pygame.mouse.get_pos()[1]):
-                            selected = piece
-                            for place in selected.legalMoves(game.board):
-                                coords = locate(place)
-                                availablesquares.append(pygame.Rect(coords[0]+(62.5*3/8),coords[1]+(62.5*3/8),15.5125,15.5125))
+                            if piece.colour == game.colour:
+                                selected = piece
+                                for place in selected.legalMoves(game.board):
+                                    coords = locate(place)
+                                    availablesquares.append(pygame.Rect(coords[0]+(62.5*3/8),coords[1]+(62.5*3/8),15.5125,15.5125))
             try:
                 for piece in prom:
                     if prom[piece].collidepoint(pygame.mouse.get_pos()[0],pygame.mouse.get_pos()[1]):
@@ -57,9 +58,11 @@ while running:
                 # Snap piece back to it's square if it was an illegal move
                 selected.coords = locate(selected.position)
             # Check if pawn has reached the back rank, if so create a surface for the promotion selection
-            if selected.symbol == 'P' and (selected.position[1] == '8' or selected.position[1] == '1'):
+            elif selected.symbol == 'P' and (selected.position[1] == '8' or selected.position[1] == '1'):
                 promotion = pygame.Surface((400,100))
                 pawn = selected
+            else:
+                game.turn()
             selected = False
             availablesquares = []
 
@@ -116,5 +119,5 @@ while running:
         promotion.blit(pygame.transform.scale(pygame.image.load('../wikipedia/'+pawn.colour+'Q.png'),(80,80)),(310,10))
         screen.blit(promotion, (100,250))
 
-    clock.tick(60)
+    clock.tick(500)
     pygame.display.update()

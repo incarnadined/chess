@@ -9,18 +9,20 @@ def checkSelfCheck(board, movingpiece, square):
     colour = movingpiece.colour
     if movingpiece.symbol == 'K':
         king = movingpiece
-
-    for rank in board.array:
-        for piece in rank:
-            if piece is not None:
-                if piece.symbol == 'K' and piece.colour == colour:
-                    king = piece
+        kingpos = square
+    else: # This else statement is needed so that the kingpos isn't overwritten with the actual king pos but instead the new square(assuming the king is moving)
+        for rank in board.array:
+            for piece in rank:
+                if piece is not None:
+                    if piece.symbol == 'K' and piece.colour == colour:
+                        king = piece
+                        kingpos = piece.position
 
     for rank in board.array:
         for piece in rank:
             if piece is not None:
                 if piece.colour != colour:
-                    if king.position in piece.legalMoves(board):
+                    if kingpos in piece.legalMoves(board):
                         king.checkhistory = True
                         return True
 
@@ -39,9 +41,33 @@ def checkCheck(board, colour):
                 if piece.colour != colour:
                     if king.position in piece.legalMoves(board):
                         king.checkhistory = True
+                        print(colour.upper(), 'is now in check')
                         return True
 
     return False
+
+
+def checkMate(board, colour):
+    ''' Does the same as checkCheck() except for checkMate not just check '''
+    moves = king.legalMoves(board)
+    check = checkCheck(board, colour)
+
+    for rank in board.array:
+        for piece in rank:
+            if piece is not None:
+                if piece.symbol == 'K' and piece.colour == colour:
+                    king = piece
+
+    # Checks if anywhere the king can go is check
+    for move in king.legalMoves(board):
+        for rank in board.array:
+            for piece in rank:
+                if piece is not None:
+                    if piece.colour != colour:
+                        if move in piece.legalMoves(board):
+                            moves.pop(moves.index(move))
+    if len(moves) == 0:
+        print(colour,'is not in checkmate, maybe')
 
 class Piece(pygame.sprite.Sprite):
     def __init__(self, position, colour, symbol):
@@ -342,7 +368,39 @@ class Pawn(Piece):
             'sw': [],
             'se': [],
         }
+        self.matrix = matrix(self.position)
         if self.position[1] != '8' and self.position[1] != '1':
+            if self.colour == 'w':
+                if board.array[int(str(expand(int(matrix(self.position))-10))[0])][int(str(expand(int(matrix(self.position))-10))[1])] is None:
+                    self.paths['n'].append(chess(expand(int(matrix(self.position))-10)))
+                    if len(self.poshistory) == 0 and board.array[int(str(expand(int(matrix(self.position))-20))[0])][int(str(expand(int(matrix(self.position))-20))[1])] == None:
+                        self.paths['n'].append(chess(expand(int(matrix(self.position))-20)))
+                left = expand(str(int(self.matrix)-11))
+                right = expand(str(int(self.matrix)-9))
+                if left[1] == '8' or left[1] == '9':
+                    pass
+                elif board.array[int(left[0])][int(left[1])] != None:
+                    self.paths['nw'].append(chess(left))
+                if right[1] == '8' or right[1] == '9':
+                    pass
+                elif board.array[int(right[0])][int(right[1])] != None:
+                    self.paths['ne'].append(chess(right))
+            elif self.colour == 'b':
+                if board.array[int(str(expand(int(matrix(self.position))+10))[0])][int(str(expand(int(matrix(self.position))+10))[1])] is None:
+                    self.paths['n'].append(chess(expand(int(matrix(self.position))+10)))
+                    if len(self.poshistory) == 0 and board.array[int(str(expand(int(matrix(self.position))+20))[0])][int(str(expand(int(matrix(self.position))+20))[1])] == None:
+                        self.paths['n'].append(chess(expand(int(matrix(self.position))+20)))
+                left = expand(str(int(self.matrix)+9))
+                right = expand(str(int(self.matrix)+11))
+                if left[1] == '8' or left[1] == '9':
+                    pass
+                elif board.array[int(left[0])][int(left[1])] != None:
+                    self.paths['se'].append(chess(left))
+                if right[1] == '8' or right[1] == '9':
+                    pass
+                elif board.array[int(right[0])][int(right[1])] != None:
+                    self.paths['sw'].append(chess(right))
+        '''if self.position[1] != '8' and self.position[1] != '1':
             if self.colour == 'w':
                 try:
                     if board.array[int(str(expand(int(matrix(self.position))-10))[0])][int(str(expand(int(matrix(self.position))-10))[1])] is None:
@@ -350,7 +408,7 @@ class Pawn(Piece):
                 except IndexError:
                         pass
                 try:
-                    if len(self.poshistory) == 0:
+                    if len(self.poshistory) == 0 and board.array[int(str(expand(int(matrix(self.position))-20))[0])][int(str(expand(int(matrix(self.position))-20))[1])] == None:
                         self.paths['n'].append(chess(expand(int(matrix(self.position))-20)))
                 except IndexError:
                         pass
@@ -371,7 +429,7 @@ class Pawn(Piece):
                 except IndexError:
                         pass
                 try:
-                    if len(self.poshistory) == 0:
+                    if len(self.poshistory) == 0 and board.array[int(str(expand(int(matrix(self.position))+20))[0])][int(str(expand(int(matrix(self.position))+20))[1])] == None:
                         self.paths['s'].append(chess(int(matrix(self.position))+20))
                 except IndexError:
                         pass
@@ -384,7 +442,7 @@ class Pawn(Piece):
                     if board.array[int(str(int(matrix(self.position))+9)[0])][int(str(int(matrix(self.position))+9)[1])] is not None:
                         self.paths['sw'].append(chess(int(matrix(self.position))+9))
                 except IndexError:
-                        pass
+                        pass'''
 
         return self.removeMoves(board)
 
@@ -393,7 +451,7 @@ class Board():
     def __init__(self):
         self.array = [
             [Rook('a8','b'),Knight('b8','b'),Bishop('c8','b'),Queen('d8','b'),King('e8','b'),Bishop('f8','b'),Knight('g8','b'),Rook('h8','b')],
-            [None for x in range(8)],
+            [Pawn('a7','b'),Pawn('b7','b'),Pawn('c7','b'),Pawn('d7','b'),Pawn('e7','b'),Pawn('f7','b'),Pawn('g7','b'),Pawn('h7','b')],
             [None for x in range(8)],
             [None for x in range(8)],
             [None for x in range(8)],
@@ -458,7 +516,14 @@ class Board():
 
                 piece.update(square)
                 history.append(algebraicmove)
+
+                if piece.colour == 'w':
+                    check = checkCheck(self, 'b')
+                else:
+                    check = checkCheck(self, 'w')
                 return True
+        else:
+            print('That move would put your king in check')
         return False
 
 
@@ -474,6 +539,11 @@ class Game():
         self.captured = []
         self.history = []
 
+    def turn(self):
+        if self.colour == 'w':
+            self.colour = 'b'
+        elif self.colour == 'b':
+            self.colour = 'w'
 
 #game = Game()
 #print(game.board.array)
