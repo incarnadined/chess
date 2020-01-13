@@ -15,7 +15,7 @@ def airun(level, board):
             
         piece = random.choice(possiblemoves)
         move = random.choice(piece[1])
-        return piece, move
+        return piece[0], move
     elif level == 2:
         # Still pretty much random except it will take if it can
         pass

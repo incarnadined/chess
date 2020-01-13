@@ -5,6 +5,7 @@ availablesquares = []
 images = {}
 promotion = False
 prom = {}
+computerlevel = 1
 
 
 def number(letter):

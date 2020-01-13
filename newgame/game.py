@@ -1,6 +1,7 @@
 from pygame.locals import *
 from random import randint
 from pieces import *
+from minmax import *
 import pygame
 
 pygame.init()
@@ -22,6 +23,17 @@ running = True
 while running:
     if selected:
         selected.coords = pygame.mouse.get_pos()[0]-63//2, pygame.mouse.get_pos()[1]-63//2
+    if game.colour == 'b' and computerlevel != 0:
+        piece, move = airun(computerlevel, game.board)
+        print(piece)
+        print(move)
+        nomove = game.board.move(piece, move, game.captured, game.history, game.checkmate)
+        while nomove == False: # The move would've done something bad to do with check
+            piece, move = airun(computerlevel, game.board)
+            print(piece)
+            print(move)
+            nomove = game.board.move(piece, move, game.captured, game.history, game.checkmate)
+        game.turn()
     for event in pygame.event.get():
         if event.type == QUIT:
             running = False
@@ -31,10 +43,17 @@ while running:
                     if piece is not None:
                         if piece.rect.collidepoint(pygame.mouse.get_pos()[0], pygame.mouse.get_pos()[1]):
                             if piece.colour == game.colour:
-                                selected = piece
-                                for place in selected.legalMoves(game.board):
-                                    coords = locate(place)
-                                    availablesquares.append(pygame.Rect(coords[0]+(62.5*3/8),coords[1]+(62.5*3/8),15.5125,15.5125))
+                                if computerlevel != 0:
+                                    if game.colour == 'w':
+                                        selected = piece
+                                        for place in selected.legalMoves(game.board):
+                                            coords = locate(place)
+                                            availablesquares.append(pygame.Rect(coords[0]+(62.5*3/8),coords[1]+(62.5*3/8),15.5125,15.5125))
+                                else:
+                                    selected = piece
+                                    for place in selected.legalMoves(game.board):
+                                        coords = locate(place)
+                                        availablesquares.append(pygame.Rect(coords[0]+(62.5*3/8),coords[1]+(62.5*3/8),15.5125,15.5125))
             try:
                 for piece in prom:
                     if prom[piece].collidepoint(pygame.mouse.get_pos()[0],pygame.mouse.get_pos()[1]):
@@ -53,7 +72,7 @@ while running:
                 pass
         elif event.type == MOUSEBUTTONDOWN:
             coords = pygame.mouse.get_pos()
-            legal = game.board.move(selected, square(coords), game.captured, game.history)
+            legal = game.board.move(selected, square(coords), game.captured, game.history, game.checkmate)
             if legal is False:
                 # Snap piece back to it's square if it was an illegal move
                 selected.coords = locate(selected.position)
