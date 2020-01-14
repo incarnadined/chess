@@ -2,8 +2,19 @@ from functions import *
 import pygame
 import copy
 
+def promote(board, piece, pawnpromotion):
+    if pawnpromotion == 'knight':
+        board.array[int(matrix(piece.position)[0])][int(matrix(piece.position)[1])] = Knight(piece.position,piece.colour)
+    elif pawnpromotion == 'bish':
+        board.array[int(matrix(piece.position)[0])][int(matrix(piece.position)[1])] = Bishop(piece.position,piece.colour)
+    elif pawnpromotion == 'rook':
+        board.array[int(matrix(piece.position)[0])][int(matrix(piece.position)[1])] = Rook(piece.position,piece.colour)
+    elif pawnpromotion == 'queen':
+        board.array[int(matrix(piece.position)[0])][int(matrix(piece.position)[1])] = Queen(piece.position,piece.colour)
+
 def checkSelfCheck(board, movingpiece, square):
-    ''' Checks if the current team will be moving into check, returns True if they are '''
+    ''' Checks if the current team will be moving into check, returns True if they are 
+        IMPORTANT: do NOT call this function with a piece moving onto a square with its king on (or its own colour)'''
     board.array[int(matrix(square)[0])][int(matrix(square)[1])] = movingpiece
     board.array[int(matrix(movingpiece.position)[0])][int(matrix(movingpiece.position)[1])] = None
     colour = movingpiece.colour
@@ -16,8 +27,8 @@ def checkSelfCheck(board, movingpiece, square):
                 if piece is not None:
                     if piece.symbol == 'K' and piece.colour == colour:
                         king = piece
-                        kingpos = piece.position
-
+                        kingpos = king.position
+    
     for rank in board.array:
         for piece in rank:
             if piece is not None:
@@ -29,20 +40,23 @@ def checkSelfCheck(board, movingpiece, square):
     return False
 
 def checkCheck(board, colour):
-    for rank in board.array:
-        for piece in rank:
-            if piece is not None:
-                if piece.symbol == 'K' and piece.colour == colour:
-                    king = piece
+    try:
+        for rank in board.array:
+            for piece in rank:
+                if piece is not None:
+                    if piece.symbol == 'K' and piece.colour == colour:
+                        king = piece
 
-    for rank in board.array:
-        for piece in rank:
-            if piece is not None:
-                if piece.colour != colour:
-                    if king.position in piece.legalMoves(board):
-                        king.checkhistory = True
-                        print(colour, 'is now in check')
-                        return True
+        for rank in board.array:
+            for piece in rank:
+                if piece is not None:
+                    if piece.colour != colour:
+                        if king.position in piece.legalMoves(board):
+                            king.checkhistory = True
+                            print(colour, 'is now in check')
+                            return True
+    except UnboundLocalError: # King isn't on the board
+        pass
 
     return False
 
@@ -107,13 +121,14 @@ def checkMate(board, colour):
                                 moves.pop(moves.index(move))
                             except ValueError:
                                 print('WARNING: value for checkmate moving not in list') 
+
     if len(moves) == 0:
         print(colour,'is in checkmate')
         return True
 
 
 class Piece(pygame.sprite.Sprite):
-    def __init__(self, position, colour, symbol):
+    def __init__(self, position, colour, symbol, value):
         pygame.sprite.Sprite.__init__(self)
         self.position = position
         self.poshistory = []
@@ -121,6 +136,7 @@ class Piece(pygame.sprite.Sprite):
         self.symbol = symbol
         self.coords = locate(self.position)
         self.rect = pygame.Rect(self.coords[0],self.coords[1],63,63)
+        self.value = value
     
     def update(self, position):
         self.poshistory.append(self.position)
@@ -149,7 +165,11 @@ class Piece(pygame.sprite.Sprite):
 
 class King(Piece):
     def __init__(self, position, colour):
-        Piece.__init__(self, position, colour, 'K')
+        if colour == 'w':
+            value = -999
+        else:
+            value = 999
+        Piece.__init__(self, position, colour, 'K', value)
         self.paths = {
             '1': []
         }
@@ -211,7 +231,11 @@ class King(Piece):
 
 class Queen(Piece):
     def __init__(self, position, colour):
-        Piece.__init__(self, position, colour, 'Q')
+        if colour == 'w':
+            value = -9
+        else:
+            value = 9
+        Piece.__init__(self, position, colour, 'Q', value)
         self.paths = {
             'n': [],
             'ne': [],
@@ -292,7 +316,11 @@ class Queen(Piece):
 
 class Rook(Piece):
     def __init__(self, position, colour):
-        Piece.__init__(self, position, colour, 'R')
+        if colour == 'w':
+            value = -5
+        else:
+            value = 5
+        Piece.__init__(self, position, colour, 'R', value)
         self.paths = {
             'n': [],
             'e': [],
@@ -336,7 +364,11 @@ class Rook(Piece):
 
 class Bishop(Piece):
     def __init__(self, position, colour):
-        Piece.__init__(self, position, colour, 'B')
+        if colour == 'w':
+            value = -3
+        else:
+            value = 3
+        Piece.__init__(self, position, colour, 'B', value)
         self.paths = {
             'ne': [],
             'se': [],
@@ -386,7 +418,11 @@ class Bishop(Piece):
 
 class Knight(Piece):
     def __init__(self, position, colour):
-        Piece.__init__(self, position, colour, 'N')
+        if colour == 'w':
+            value = -3
+        else:
+            value = 3
+        Piece.__init__(self, position, colour, 'N', value)
         self.paths = {
             '1': []
         }
@@ -411,7 +447,11 @@ class Knight(Piece):
 
 class Pawn(Piece):
     def __init__(self, position, colour):
-        Piece.__init__(self, position, colour, 'P')
+        if colour == 'w':
+            value = -1
+        else:
+            value = 1
+        Piece.__init__(self, position, colour, 'P', value)
         self.paths = {
             '1': []
         }
@@ -485,10 +525,10 @@ class Board():
             [None for x in range(8)]
         ]
 
-    def move(self, piece, square, captured, history, checkmate):
+    def move(self, piece, square, game):
         '''Moves a piece to a square'''
-        if checkSelfCheck(copy.deepcopy(self), piece, square) is not True:
-            if square in piece.legalMoves(self):
+        if square in piece.legalMoves(self):
+            if checkSelfCheck(copy.deepcopy(self), piece, square) is not True:
                 if piece.symbol != 'P':
                     algebraicmove = piece.symbol
                 else:
@@ -497,11 +537,11 @@ class Board():
                 newsquare = self.array[int(matrix(square)[0])][int(matrix(square)[1])]
                 if newsquare is not None:
                     algebraicmove+='x'
-                    captured.append(newsquare)
+                    game.captured.append(newsquare)
                 self.array[int(matrix(square)[0])][int(matrix(square)[1])] = piece
                 self.array[int(matrix(piece.position)[0])][int(matrix(piece.position)[1])] = None
-                algebraicmove+=square
 
+                algebraicmove+=square
                 if piece.symbol == 'K':
                     if len(piece.poshistory) == 0:
                         if square == 'g1':
@@ -530,17 +570,19 @@ class Board():
                             algebraicmove = '0-0-0'
 
                 piece.update(square)
-                history.append(algebraicmove)
+                game.history.append(algebraicmove)
 
                 if piece.colour == 'w':
-                    if checkMate(self, 'b') == False:
-                        checkmate = 'b'
+                    if checkMate(self, 'b') == True:
+                        game.checkmate = 'b'
                 else:
                     if checkMate(self, 'w') == True:
-                        checkmate = 'w'
+                        game.checkmate = 'w'
                 return True
-        else:
-            print('That move would put/leave your king in check')
+            elif game.computerlevel == 0:
+                print('That move would put/leave your king in check')
+            elif piece.colour == 'w': # Don't print the message if AI is recieving it
+                print('That move would put/leave your king in check')
         return False
 
 
@@ -556,6 +598,7 @@ class Game():
         self.captured = []
         self.history = []
         self.checkmate = ''
+        self.computerlevel = 0
 
     def turn(self):
         if self.colour == 'w':

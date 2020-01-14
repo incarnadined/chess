@@ -23,16 +23,24 @@ running = True
 while running:
     if selected:
         selected.coords = pygame.mouse.get_pos()[0]-63//2, pygame.mouse.get_pos()[1]-63//2
-    if game.colour == 'b' and computerlevel != 0:
-        piece, move = airun(computerlevel, game.board)
-        print(piece)
-        print(move)
-        nomove = game.board.move(piece, move, game.captured, game.history, game.checkmate)
-        while nomove == False: # The move would've done something bad to do with check
-            piece, move = airun(computerlevel, game.board)
-            print(piece)
-            print(move)
-            nomove = game.board.move(piece, move, game.captured, game.history, game.checkmate)
+    if game.colour == 'b' and game.computerlevel != 0:
+        piece, move, pawnpromotion = airun(game.computerlevel, game.board)
+        print(piece.position, piece.poshistory, piece.legalMoves(game.board))
+        moved = game.board.move(piece, move, game)
+        print(moved)
+        if moved and piece.symbol == 'P' and matrix(move)[0] == '7':
+            promote(game.board, piece, pawnpromotion)
+        while moved == False: # The move would've done something bad to do with check
+            piece, move, pawnpromotion = airun(game.computerlevel, game.board)
+            print(piece, move)
+            print(moved)
+            moved = game.board.move(piece, move, game)
+            if moved and piece.symbol == 'P' and matrix(move)[0] == 7:
+                promote(game.board, piece, pawnpromotion)
+            if checkMate(game.board, 'b') == True:
+                print('AI in checkmate')
+                break
+        # Comment the next line for some fun
         game.turn()
     for event in pygame.event.get():
         if event.type == QUIT:
@@ -43,7 +51,7 @@ while running:
                     if piece is not None:
                         if piece.rect.collidepoint(pygame.mouse.get_pos()[0], pygame.mouse.get_pos()[1]):
                             if piece.colour == game.colour:
-                                if computerlevel != 0:
+                                if game.computerlevel != 0:
                                     if game.colour == 'w':
                                         selected = piece
                                         for place in selected.legalMoves(game.board):
@@ -68,11 +76,12 @@ while running:
                         promotion = False
                         pawn = False
                         prom = {}
+                        game.turn()
             except KeyError: #The list has been cleared
                 pass
         elif event.type == MOUSEBUTTONDOWN:
             coords = pygame.mouse.get_pos()
-            legal = game.board.move(selected, square(coords), game.captured, game.history, game.checkmate)
+            legal = game.board.move(selected, square(coords), game)
             if legal is False:
                 # Snap piece back to it's square if it was an illegal move
                 selected.coords = locate(selected.position)
@@ -80,7 +89,7 @@ while running:
             elif selected.symbol == 'P' and (selected.position[1] == '8' or selected.position[1] == '1'):
                 promotion = pygame.Surface((400,100))
                 pawn = selected
-            else:
+            elif promotion is not True:
                 game.turn()
             selected = False
             availablesquares = []
