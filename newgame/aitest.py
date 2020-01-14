@@ -1,5 +1,5 @@
 from pieces import Board
-from minmax import minMax
+from minmax import evaluate
 
 board= Board()
-print(minMax(board))
+print(evaluate(board, 0))

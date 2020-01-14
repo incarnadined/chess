@@ -166,9 +166,9 @@ class Piece(pygame.sprite.Sprite):
 class King(Piece):
     def __init__(self, position, colour):
         if colour == 'w':
-            value = -999
+            value = -9999
         else:
-            value = 999
+            value = 9999
         Piece.__init__(self, position, colour, 'K', value)
         self.paths = {
             '1': []
@@ -598,7 +598,7 @@ class Game():
         self.captured = []
         self.history = []
         self.checkmate = ''
-        self.computerlevel = 0
+        self.computerlevel = 2
 
     def turn(self):
         if self.colour == 'w':

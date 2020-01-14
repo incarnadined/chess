@@ -5,14 +5,15 @@ import copy
 
 game = Game()
 
-def evaluate(board, currentvalue):
+def evaluate(board):
+    currentvalue = 0
     piecesonboard = []
     for rank in board.array:
         for piece in rank:
             if piece is not None:
                 piecesonboard.append(piece)
     for piece in piecesonboard:
-        currentvalue+=piece.value
+        currentvalue+=piece.value 
     return currentvalue
 
 def minMax(board, depth, maxing=False):
@@ -84,8 +85,10 @@ def airun(level, board):
     elif level == 2:
         moves = {}
         pieces = []
-        value = 0
         finalmoves = []
+        equalmoves = []
+        i = 0
+        captured = False
         for rank in board.array:
             for piece in rank:
                 if piece is not None:
@@ -94,27 +97,33 @@ def airun(level, board):
         for piece in pieces:
             originalmove = piece.position
             for move in piece.legalMoves(board):
+                if board.array[int(matrix(move)[0])][int(matrix(move)[1])] is not None:
+                    captured = board.array[int(matrix(move)[0])][int(matrix(move)[1])]
                 board.array[int(matrix(originalmove)[0])][int(matrix(originalmove)[1])] = None
                 board.array[int(matrix(move)[0])][int(matrix(move)[1])] = piece
-                value = evaluate(copy.deepcopy(board), value)
-                board.array[int(matrix(move)[0])][int(matrix(move)[1])] = None
+                value = evaluate(copy.deepcopy(board))
+                if captured:
+                    board.array[int(matrix(move)[0])][int(matrix(move)[1])] = captured
+                    captured = False
+                else:
+                    board.array[int(matrix(move)[0])][int(matrix(move)[1])] = None
                 board.array[int(matrix(originalmove)[0])][int(matrix(originalmove)[1])] = piece
-                moves[move] = (value, piece)
+                moves[str(i)] = (value, piece, move)
+                i+=1
 
-        moves = sorted(moves.items(), key=lambda x: x[0])
-        if moves[0][1][0] == moves[1][1][0]:
-            for i in moves:
-                if i[1][0] == moves[0][1][0]:
-                    finalmoves.append(i)
-        print(moves)
-        if finalmoves:
-            print(finalmoves)
-            finalmove = random.choice(finalmoves)
-        else:
-            finalmove = moves[0]
+        moves = sorted(moves.items(), key=lambda x: x[1][0], reverse=True)
 
-        print(finalmove[1][1], finalmove[0], 'queen')
-        return finalmove[1][1], finalmove[0], 'queen'
+        for i in range(len(moves)): 
+            if moves[i][1][0] == moves[0][1][0]:
+                equalmoves.append(moves[i])
+
+        finalvalues = random.choice(equalmoves)
+
+        piece = finalvalues[1][1]
+        move = finalvalues[1][2]
+
+        print(piece, move, 'queen')
+        return piece, move, 'queen'
 
     elif level == 3:
         # Uses minmax to a depth of 3?
